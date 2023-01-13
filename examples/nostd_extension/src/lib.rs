@@ -21,7 +21,7 @@ pub extern "C" fn testext_fn(
 }
 
 #[no_mangle]
-pub extern "C" fn sqlite_nostdextension_init(
+pub extern "C" fn sqlite3_nostdextension_init(
     db: *mut sqlite3,
     _err_msg: *mut *mut c_char,
     api: *mut sqlite3_api_routines,
