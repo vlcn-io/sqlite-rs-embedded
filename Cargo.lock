@@ -128,14 +128,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nostd_extension"
-version = "0.1.0"
-dependencies = [
- "sqlite3_allocator",
- "sqlite3_capi",
-]
-
-[[package]]
 name = "once_cell"
 version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -204,6 +196,14 @@ name = "sqlite3_capi"
 version = "0.1.0"
 dependencies = [
  "bindgen",
+]
+
+[[package]]
+name = "sqlite_nostd"
+version = "0.1.0"
+dependencies = [
+ "sqlite3_allocator",
+ "sqlite3_capi",
 ]
 
 [[package]]

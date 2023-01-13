@@ -12,4 +12,4 @@ name = "nostd_extension"
 crate-type = ["cdylib"]
 
 [dependencies]
-sqlite3_capi = { path="../../sqlite3_capi"}
+sqlite_nostd = { path="../../"}

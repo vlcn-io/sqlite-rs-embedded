@@ -7,6 +7,10 @@ pub mod bindings {
     include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 }
 
+pub use bindings::{
+    sqlite3, sqlite3_api_routines, sqlite3_context, sqlite3_value, SQLITE_OK, SQLITE_UTF8,
+};
+
 extern crate alloc;
 
 use alloc::ffi::{CString, NulError};
