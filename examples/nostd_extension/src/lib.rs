@@ -3,9 +3,9 @@
 
 use core::ffi::c_char;
 use sqlite3_allocator::SQLite3Allocator;
-use sqlite_nostd::{
-    sqlite3, sqlite3_api_routines, sqlite3_capi, sqlite3_context, sqlite3_value, SQLITE_OK,
-    SQLITE_UTF8,
+use sqlite3_capi;
+use sqlite3_capi::bindings::{
+    sqlite3, sqlite3_api_routines, sqlite3_context, sqlite3_value, SQLITE_OK, SQLITE_UTF8,
 };
 
 #[global_allocator]
@@ -17,7 +17,7 @@ pub extern "C" fn testext_fn(
     _argc: i32,
     _argv: *mut *mut sqlite3_value,
 ) {
-    sqlite_nostd::result_int(ctx, 100);
+    sqlite3_capi::result_int(ctx, 100);
 }
 
 #[no_mangle]
@@ -26,24 +26,22 @@ pub extern "C" fn sqlite3_exampleextension_init(
     _err_msg: *mut *mut c_char,
     api: *mut sqlite3_api_routines,
 ) -> u32 {
-    sqlite_nostd::init(api);
+    sqlite3_capi::EXTENSION_INIT2(api);
 
     // register a function extension
     // use some collections inside the function
     // return a string to test allocation
-    unsafe {
-        sqlite3_capi::create_function_v2(
-            db,
-            "testit\0".as_ptr() as *const c_char,
-            0,
-            SQLITE_UTF8,
-            core::ptr::null_mut(),
-            Some(testext_fn),
-            None,
-            None,
-            None,
-        );
-    }
+    sqlite3_capi::create_function_v2(
+        db,
+        "testit\0".as_ptr() as *const c_char,
+        0,
+        SQLITE_UTF8,
+        core::ptr::null_mut(),
+        Some(testext_fn),
+        None,
+        None,
+        None,
+    );
 
     SQLITE_OK
 }
