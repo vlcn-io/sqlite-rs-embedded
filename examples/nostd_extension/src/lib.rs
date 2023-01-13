@@ -72,14 +72,15 @@ fn oom(_: Layout) -> ! {
     core::intrinsics::abort()
 }
 
+// We only need to define these symbols when targetin WASM
 #[no_mangle]
 pub extern "C" fn __rust_alloc(size: usize, align: usize) -> *mut u8 {
     unsafe { ALLOCATOR.alloc(Layout::from_size_align_unchecked(size, align)) }
 }
 
 #[no_mangle]
-pub extern "C" fn __rust_dealloc(ptr: *mut u8, old_size: usize, align: usize) {
-    unsafe { ALLOCATOR.dealloc(ptr, Layout::from_size_align_unchecked(old_size, align)) }
+pub extern "C" fn __rust_dealloc(ptr: *mut u8, size: usize, align: usize) {
+    unsafe { ALLOCATOR.dealloc(ptr, Layout::from_size_align_unchecked(size, align)) }
 }
 
 #[no_mangle]
@@ -94,7 +95,6 @@ pub extern "C" fn __rust_realloc(
             ptr,
             Layout::from_size_align_unchecked(old_size, align),
             size,
-            align,
         )
     }
 }
@@ -102,4 +102,9 @@ pub extern "C" fn __rust_realloc(
 #[no_mangle]
 pub extern "C" fn __rust_alloc_zeroed(size: usize, align: usize) -> *mut u8 {
     unsafe { ALLOCATOR.alloc_zeroed(Layout::from_size_align_unchecked(size, align)) }
+}
+
+#[no_mangle]
+pub extern "C" fn __rust_alloc_error_handler(_: Layout) -> ! {
+    core::intrinsics::abort()
 }
