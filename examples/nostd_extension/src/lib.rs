@@ -1,5 +1,6 @@
 #![no_std]
 #![feature(alloc_error_handler)]
+#![feature(core_intrinsics)]
 
 use core::ffi::c_char;
 use sqlite_nostd;
@@ -50,11 +51,11 @@ pub extern "C" fn sqlite3_nostdextension_init(
 use core::panic::PanicInfo;
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    loop {}
+    core::intrinsics::abort()
 }
 
 use core::alloc::Layout;
 #[alloc_error_handler]
 fn oom(_: Layout) -> ! {
-    loop {}
+    core::intrinsics::abort()
 }
