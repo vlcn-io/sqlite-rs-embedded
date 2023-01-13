@@ -35,6 +35,12 @@ pub fn strdyn(s: &str) -> Result<CString, NulError> {
     CString::new(s)
 }
 
+pub extern "C" fn dropstr(ptr: *mut c_void) {
+    unsafe {
+        let _ = CString::from_raw(ptr as *mut c_char);
+    }
+}
+
 #[macro_export]
 macro_rules! args {
     ($argc:expr, $argv:expr) => {

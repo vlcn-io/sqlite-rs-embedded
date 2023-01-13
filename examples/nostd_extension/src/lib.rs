@@ -26,11 +26,21 @@ pub extern "C" fn testext_fn(
     // );
 
     // Dynamic strings:
-    sqlite::strdyn("Hello, world!")
-        .map(|s| sqlite::result_text(ctx, s.as_ptr(), -1, sqlite::Destructor::TRANSIENT))
-        .unwrap_or_else(|_| sqlite::result_error(ctx, "oom").unwrap());
+    // sqlite::strdyn("Hello, world!")
+    //     .map(|s| sqlite::result_text(ctx, s.as_ptr(), -1, sqlite::Destructor::TRANSIENT))
+    //     .unwrap_or_else(|_| sqlite::result_error(ctx, "oom").unwrap());
 
     // Dynamic strings with custom deallocator:
+    sqlite::strdyn("Hello, world!")
+        .map(|s| {
+            sqlite::result_text(
+                ctx,
+                s.into_raw(),
+                -1,
+                sqlite::Destructor::CUSTOM(sqlite::dropstr),
+            )
+        })
+        .unwrap_or_else(|_| sqlite::result_error(ctx, "oom").unwrap());
 }
 
 #[no_mangle]
@@ -59,7 +69,8 @@ pub extern "C" fn sqlite3_nostdextension_init(
     sqlite::OK
 }
 
-// TODO: these shouldn't be provided per extension.
+// ---
+// Move these two functions to a separate crate
 use core::panic::PanicInfo;
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
@@ -71,8 +82,11 @@ use core::alloc::Layout;
 fn oom(_: Layout) -> ! {
     core::intrinsics::abort()
 }
+// ---
 
 // We only need to define these symbols when targetin WASM
+// So we should stick them in a crate that our extension can
+// include when the target is WASM.
 #[no_mangle]
 pub extern "C" fn __rust_alloc(size: usize, align: usize) -> *mut u8 {
     unsafe { ALLOCATOR.alloc(Layout::from_size_align_unchecked(size, align)) }
