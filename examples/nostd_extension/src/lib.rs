@@ -5,8 +5,8 @@
 use core::ffi::c_char;
 use sqlite_nostd;
 use sqlite_nostd::{
-    sqlite3, sqlite3_api_routines, sqlite3_context, sqlite3_value, SQLite3Allocator, SQLITE_OK,
-    SQLITE_UTF8,
+    sqlite3, sqlite3_api_routines, sqlite3_context, sqlite3_value, SQLite3Allocator,
+    SQLITE_INNOCUOUS, SQLITE_OK, SQLITE_UTF8,
 };
 
 #[global_allocator]

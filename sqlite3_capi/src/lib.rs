@@ -8,7 +8,8 @@ pub mod bindings {
 }
 
 pub use bindings::{
-    sqlite3, sqlite3_api_routines, sqlite3_context, sqlite3_value, SQLITE_OK, SQLITE_UTF8,
+    sqlite3, sqlite3_api_routines, sqlite3_context, sqlite3_value, SQLITE_INNOCUOUS, SQLITE_OK,
+    SQLITE_UTF8,
 };
 
 extern crate alloc;
@@ -18,9 +19,9 @@ use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
 // macro emulation: https://github.com/asg017/sqlite-loadable-rs/blob/main/src/ext.rs
-static mut SQLITE3_API: *mut bindings::sqlite3_api_routines = ptr::null_mut();
+static mut SQLITE3_API: *mut sqlite3_api_routines = ptr::null_mut();
 
-pub fn EXTENSION_INIT2(api: *mut bindings::sqlite3_api_routines) {
+pub fn EXTENSION_INIT2(api: *mut sqlite3_api_routines) {
     unsafe {
         SQLITE3_API = api;
     }
@@ -248,6 +249,33 @@ pub fn create_function_v2(
     destroy: Option<unsafe extern "C" fn(*mut c_void)>,
 ) -> c_int {
     unsafe {
+        // SQLITE3_API is null when -DOMIT_LOAD_EXTENSION flag is set
+        // in that case we're statically linked directly and can reference
+        // the function directly
+        // match (*SQLITE3_API).create_function_v2 {
+        //     None => bindings::sqlite3_create_function_v2(
+        //         db,
+        //         s,
+        //         argc,
+        //         i32::try_from(flags).expect("Invalid flags"),
+        //         p_app,
+        //         x_func,
+        //         x_step,
+        //         x_final,
+        //         destroy,
+        //     ),
+        //     Some(f) => f(
+        //         db,
+        //         s,
+        //         argc,
+        //         i32::try_from(flags).expect("Invalid flags"),
+        //         p_app,
+        //         x_func,
+        //         x_step,
+        //         x_final,
+        //         destroy,
+        //     ),
+        // }
         ((*SQLITE3_API).create_function_v2.expect(EXPECT_MESSAGE))(
             db,
             s,
