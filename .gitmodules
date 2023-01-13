@@ -1,0 +1,3 @@
+[submodule "wasm-targets/wa-sqlite"]
+	path = wasm-targets/wa-sqlite
+	url = git@github.com:vlcn-io/wa-sqlite.git

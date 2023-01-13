@@ -1,6 +1,3 @@
-#![no_std]
-#![feature(alloc_error_handler)]
-
 use core::ffi::c_char;
 use sqlite3_allocator::SQLite3Allocator;
 use sqlite3_capi;
@@ -21,7 +18,7 @@ pub extern "C" fn testext_fn(
 }
 
 #[no_mangle]
-pub extern "C" fn sqlite3_nostdextension_init(
+pub extern "C" fn sqlite3_stdextension_init(
     db: *mut sqlite3,
     _err_msg: *mut *mut c_char,
     api: *mut sqlite3_api_routines,
@@ -44,17 +41,4 @@ pub extern "C" fn sqlite3_nostdextension_init(
     );
 
     SQLITE_OK
-}
-
-// TODO: these shouldn't be provided per extension.
-use core::panic::PanicInfo;
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    loop {}
-}
-
-use core::alloc::Layout;
-#[alloc_error_handler]
-fn oom(_: Layout) -> ! {
-    loop {}
 }

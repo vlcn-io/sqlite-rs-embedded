@@ -1,8 +1,9 @@
 [package]
-name = "nostd_extension"
+name = "std_extension"
 version = "0.1.0"
 edition = "2021"
 authors = ["Matt Wonlaw"]
+description = "Minimal bindings for SQLite3 that do not require std"
 keywords = ["sqlite"]
 license = "MIT"
 
@@ -12,13 +13,3 @@ crate-type = ["cdylib"]
 
 [dependencies]
 sqlite3_capi = { path="../../sqlite3_capi"}
-sqlite3_allocator = { path="../../sqlite3_allocator" }
-
-[profile.dev]
-panic = "abort"
-
-[profile.release]
-panic = "abort"
-
-[build]
-target = "wasm32-unknown-unknown"
