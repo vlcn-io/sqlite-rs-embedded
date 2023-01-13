@@ -28,3 +28,5 @@ console.log(await sql`CREATE TABLE foo (a)`);
 console.log(await sql`INSERT INTO foo VALUES (1)`);
 
 console.log(await sql`SELECT * FROM foo`);
+
+console.log(await sql`SELECT testit()`);

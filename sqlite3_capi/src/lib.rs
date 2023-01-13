@@ -8,9 +8,15 @@ pub mod bindings {
 }
 
 pub use bindings::{
-    sqlite3, sqlite3_api_routines, sqlite3_context, sqlite3_value, SQLITE_INNOCUOUS, SQLITE_OK,
-    SQLITE_UTF8,
+    sqlite3, sqlite3_api_routines as api_routines, sqlite3_context as context,
+    sqlite3_value as value, SQLITE_INNOCUOUS as INNOCUOUS, SQLITE_OK as OK, SQLITE_UTF8 as UTF8,
 };
+
+pub enum Destructor {
+    TRANSIENT,
+    STATIC,
+    CUSTOM(unsafe extern "C" fn(*mut c_void)),
+}
 
 extern crate alloc;
 
@@ -19,9 +25,9 @@ use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
 // macro emulation: https://github.com/asg017/sqlite-loadable-rs/blob/main/src/ext.rs
-static mut SQLITE3_API: *mut sqlite3_api_routines = ptr::null_mut();
+static mut SQLITE3_API: *mut api_routines = ptr::null_mut();
 
-pub fn EXTENSION_INIT2(api: *mut sqlite3_api_routines) {
+pub fn EXTENSION_INIT2(api: *mut api_routines) {
     unsafe {
         SQLITE3_API = api;
     }
@@ -49,7 +55,7 @@ pub fn free(ptr: *mut u8) {
     }
 }
 
-pub fn value_text<'a>(arg1: *mut bindings::sqlite3_value) -> &'a str {
+pub fn value_text<'a>(arg1: *mut value) -> &'a str {
     unsafe {
         let len = value_bytes(arg1);
         let bytes = ((*SQLITE3_API).value_text.expect(EXPECT_MESSAGE))(arg1);
@@ -58,15 +64,15 @@ pub fn value_text<'a>(arg1: *mut bindings::sqlite3_value) -> &'a str {
     }
 }
 
-pub fn value_type(value: *mut bindings::sqlite3_value) -> i32 {
+pub fn value_type(value: *mut value) -> i32 {
     unsafe { ((*SQLITE3_API).value_type.expect(EXPECT_MESSAGE))(value) }
 }
 
-pub fn value_bytes(arg1: *mut bindings::sqlite3_value) -> i32 {
+pub fn value_bytes(arg1: *mut value) -> i32 {
     unsafe { ((*SQLITE3_API).value_bytes.expect(EXPECT_MESSAGE))(arg1) }
 }
 
-pub fn value_blob<'a>(value: *mut bindings::sqlite3_value) -> &'a [u8] {
+pub fn value_blob<'a>(value: *mut value) -> &'a [u8] {
     unsafe {
         let n = value_bytes(value);
         let b = ((*SQLITE3_API).value_blob.expect(EXPECT_MESSAGE))(value);
@@ -94,7 +100,7 @@ pub fn column_text(stmt: *mut bindings::sqlite3_stmt, c: c_int) -> *const c_ucha
     unsafe { ((*SQLITE3_API).column_text.expect(EXPECT_MESSAGE))(stmt, c) }
 }
 
-pub fn column_value(stmt: *mut bindings::sqlite3_stmt, c: c_int) -> *mut bindings::sqlite3_value {
+pub fn column_value(stmt: *mut bindings::sqlite3_stmt, c: c_int) -> *mut value {
     unsafe { ((*SQLITE3_API).column_value.expect(EXPECT_MESSAGE))(stmt, c) }
 }
 
@@ -112,23 +118,23 @@ pub fn prepare_v2(
     unsafe { ((*SQLITE3_API).prepare_v2.expect(EXPECT_MESSAGE))(db, sql, n, stmt, leftover) }
 }
 
-pub fn value_int(arg1: *mut bindings::sqlite3_value) -> i32 {
+pub fn value_int(arg1: *mut value) -> i32 {
     unsafe { ((*SQLITE3_API).value_int.expect(EXPECT_MESSAGE))(arg1) }
 }
 
-pub fn value_int64(arg1: *mut bindings::sqlite3_value) -> i64 {
+pub fn value_int64(arg1: *mut value) -> i64 {
     unsafe { ((*SQLITE3_API).value_int64.expect(EXPECT_MESSAGE))(arg1) }
 }
 
-pub fn value_double(arg1: *mut bindings::sqlite3_value) -> f64 {
+pub fn value_double(arg1: *mut value) -> f64 {
     unsafe { ((*SQLITE3_API).value_double.expect(EXPECT_MESSAGE))(arg1) }
 }
 
-pub fn value_pointer(arg1: *mut bindings::sqlite3_value, p: *mut c_char) -> *mut c_void {
+pub fn value_pointer(arg1: *mut value, p: *mut c_char) -> *mut c_void {
     unsafe { ((*SQLITE3_API).value_pointer.expect(EXPECT_MESSAGE))(arg1, p) }
 }
 
-pub fn result_int(context: *mut bindings::sqlite3_context, v: c_int) {
+pub fn result_int(context: *mut context, v: c_int) {
     unsafe {
         ((*SQLITE3_API).result_int.expect(EXPECT_MESSAGE))(context, v);
     }
@@ -136,36 +142,40 @@ pub fn result_int(context: *mut bindings::sqlite3_context, v: c_int) {
 
 // TODO: expose a version that doesn't always require copying the blob.
 // I.e., a method that can take a destructor function for SQLite to call.
-pub fn result_blob(context: *mut bindings::sqlite3_context, blob: &[u8]) {
+pub fn result_blob(context: *mut context, blob: &[u8], d: Destructor) {
     let len = blob.len() as c_int;
     unsafe {
         ((*SQLITE3_API).result_blob.expect(EXPECT_MESSAGE))(
             context,
             blob.as_ptr().cast::<c_void>(),
             len,
-            Some(core::mem::transmute(-1_isize)),
+            match d {
+                Destructor::TRANSIENT => Some(core::mem::transmute(-1_isize)),
+                Destructor::STATIC => None,
+                Destructor::CUSTOM(f) => Some(f),
+            },
         );
     }
 }
-pub fn result_int64(context: *mut bindings::sqlite3_context, v: i64) {
+pub fn result_int64(context: *mut context, v: i64) {
     unsafe {
         ((*SQLITE3_API).result_int64.expect(EXPECT_MESSAGE))(context, v);
     }
 }
 
-pub fn result_double(context: *mut bindings::sqlite3_context, f: f64) {
+pub fn result_double(context: *mut context, f: f64) {
     unsafe {
         ((*SQLITE3_API).result_double.expect(EXPECT_MESSAGE))(context, f);
     }
 }
 
-pub fn result_null(context: *mut bindings::sqlite3_context) {
+pub fn result_null(context: *mut context) {
     unsafe {
         ((*SQLITE3_API).result_null.expect(EXPECT_MESSAGE))(context);
     }
 }
 pub fn result_pointer(
-    context: *mut bindings::sqlite3_context,
+    context: *mut context,
     pointer: *mut c_void,
     name: *mut c_char,
     destructor: Option<unsafe extern "C" fn(*mut c_void)>,
@@ -175,7 +185,7 @@ pub fn result_pointer(
     }
 }
 
-pub fn result_error(context: *mut bindings::sqlite3_context, text: &str) -> Result<(), NulError> {
+pub fn result_error(context: *mut context, text: &str) -> Result<(), NulError> {
     CString::new(text.as_bytes()).map(|s| {
         let n = text.len() as i32;
         let ptr = s.as_ptr();
@@ -185,7 +195,7 @@ pub fn result_error(context: *mut bindings::sqlite3_context, text: &str) -> Resu
     })
 }
 
-pub fn result_error_code(context: *mut bindings::sqlite3_context, code: i32) {
+pub fn result_error_code(context: *mut context, code: i32) {
     unsafe {
         ((*SQLITE3_API).result_error_code.expect(EXPECT_MESSAGE))(context, code);
     }
@@ -193,25 +203,29 @@ pub fn result_error_code(context: *mut bindings::sqlite3_context, code: i32) {
 
 // d is our destructor function.
 // -- https://dev.to/kgrech/7-ways-to-pass-a-string-between-rust-and-c-4ieb
-pub fn result_text(
-    context: *mut bindings::sqlite3_context,
-    s: *const i8,
-    n: i32,
-    d: Option<unsafe extern "C" fn(*mut c_void)>,
-) {
+pub fn result_text(context: *mut context, s: *const i8, n: i32, d: Destructor) {
     unsafe {
-        ((*SQLITE3_API).result_text.expect(EXPECT_MESSAGE))(context, s, n, d);
+        ((*SQLITE3_API).result_text.expect(EXPECT_MESSAGE))(
+            context,
+            s,
+            n,
+            match d {
+                Destructor::TRANSIENT => Some(core::mem::transmute(-1_isize)),
+                Destructor::STATIC => None,
+                Destructor::CUSTOM(f) => Some(f),
+            },
+        );
     }
 }
 
-pub fn result_subtype(context: *mut bindings::sqlite3_context, subtype: u32) {
+pub fn result_subtype(context: *mut context, subtype: u32) {
     unsafe {
         ((*SQLITE3_API).result_subtype.expect(EXPECT_MESSAGE))(context, subtype);
     }
 }
 
 pub fn set_auxdata(
-    context: *mut bindings::sqlite3_context,
+    context: *mut context,
     n: c_int,
     p: *mut c_void,
     d: Option<unsafe extern "C" fn(*mut c_void)>,
@@ -221,7 +235,7 @@ pub fn set_auxdata(
     }
 }
 
-pub fn get_auxdata(context: *mut bindings::sqlite3_context, n: c_int) -> *mut c_void {
+pub fn get_auxdata(context: *mut context, n: c_int) -> *mut c_void {
     unsafe { ((*SQLITE3_API).get_auxdata.expect(EXPECT_MESSAGE))(context, n) }
 }
 
@@ -231,21 +245,9 @@ pub fn create_function_v2(
     argc: i32,
     flags: u32,
     p_app: *mut c_void,
-    x_func: Option<
-        unsafe extern "C" fn(
-            *mut bindings::sqlite3_context,
-            i32,
-            *mut *mut bindings::sqlite3_value,
-        ),
-    >,
-    x_step: Option<
-        unsafe extern "C" fn(
-            *mut bindings::sqlite3_context,
-            i32,
-            *mut *mut bindings::sqlite3_value,
-        ),
-    >,
-    x_final: Option<unsafe extern "C" fn(*mut bindings::sqlite3_context)>,
+    x_func: Option<unsafe extern "C" fn(*mut context, i32, *mut *mut value)>,
+    x_step: Option<unsafe extern "C" fn(*mut context, i32, *mut *mut value)>,
+    x_final: Option<unsafe extern "C" fn(*mut context)>,
     destroy: Option<unsafe extern "C" fn(*mut c_void)>,
 ) -> c_int {
     unsafe {
@@ -314,7 +316,7 @@ pub fn sqlitex_declare_vtab(db: *mut bindings::sqlite3, s: *const i8) -> i32 {
 // pub fn start_extension<F>(
 //     db: *mut bindings::sqlite3,
 //     _pz_err_msg: *mut *mut c_char,
-//     p_api: *mut bindings::sqlite3_api_routines,
+//     p_api: *mut bindings::api_routines,
 //     callback: F,
 // ) -> c_uint
 // where

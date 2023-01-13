@@ -3,40 +3,42 @@
 #![feature(core_intrinsics)]
 
 use core::ffi::c_char;
-use sqlite_nostd;
-use sqlite_nostd::{
-    sqlite3, sqlite3_api_routines, sqlite3_context, sqlite3_value, SQLite3Allocator,
-    SQLITE_INNOCUOUS, SQLITE_OK, SQLITE_UTF8,
-};
+use sqlite_nostd as sqlite;
+use sqlite_nostd::SQLite3Allocator;
 
 #[global_allocator]
 static ALLOCATOR: SQLite3Allocator = SQLite3Allocator {};
 
 #[no_mangle]
 pub extern "C" fn testext_fn(
-    ctx: *mut sqlite3_context,
+    ctx: *mut sqlite::context,
     _argc: i32,
-    _argv: *mut *mut sqlite3_value,
+    _argv: *mut *mut sqlite::value,
 ) {
-    sqlite_nostd::result_int(ctx, 100);
+    sqlite::result_text(
+        ctx,
+        "Hello, world!\0".as_ptr() as *const c_char,
+        -1,
+        sqlite::Destructor::TRANSIENT,
+    );
 }
 
 #[no_mangle]
 pub extern "C" fn sqlite3_nostdextension_init(
-    db: *mut sqlite3,
+    db: *mut sqlite::sqlite3,
     _err_msg: *mut *mut c_char,
-    api: *mut sqlite3_api_routines,
+    api: *mut sqlite::api_routines,
 ) -> u32 {
-    sqlite_nostd::EXTENSION_INIT2(api);
+    sqlite::EXTENSION_INIT2(api);
 
     // register a function extension
     // use some collections inside the function
     // return a string to test allocation
-    sqlite_nostd::create_function_v2(
+    sqlite::create_function_v2(
         db,
         "testit\0".as_ptr() as *const c_char,
         0,
-        SQLITE_UTF8,
+        sqlite::UTF8,
         core::ptr::null_mut(),
         Some(testext_fn),
         None,
@@ -44,7 +46,7 @@ pub extern "C" fn sqlite3_nostdextension_init(
         None,
     );
 
-    SQLITE_OK
+    sqlite::OK
 }
 
 // TODO: these shouldn't be provided per extension.
