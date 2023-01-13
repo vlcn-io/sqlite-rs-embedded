@@ -3,12 +3,7 @@
 #![feature(core_intrinsics)]
 
 use core::ffi::c_char;
-use sqlite_nostd as sqlite;
-use sqlite_nostd::SQLite3Allocator;
-
-use core::alloc::GlobalAlloc;
-#[global_allocator]
-static ALLOCATOR: SQLite3Allocator = SQLite3Allocator {};
+use sqlite_browser as sqlite;
 
 #[no_mangle]
 pub extern "C" fn testext_fn(
@@ -67,58 +62,4 @@ pub extern "C" fn sqlite3_nostdextension_init(
     );
 
     sqlite::OK
-}
-
-// ---
-// Move these two functions to a separate crate
-use core::panic::PanicInfo;
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    core::intrinsics::abort()
-}
-
-use core::alloc::Layout;
-#[alloc_error_handler]
-fn oom(_: Layout) -> ! {
-    core::intrinsics::abort()
-}
-// ---
-
-// We only need to define these symbols when targetin WASM
-// So we should stick them in a crate that our extension can
-// include when the target is WASM.
-#[no_mangle]
-pub extern "C" fn __rust_alloc(size: usize, align: usize) -> *mut u8 {
-    unsafe { ALLOCATOR.alloc(Layout::from_size_align_unchecked(size, align)) }
-}
-
-#[no_mangle]
-pub extern "C" fn __rust_dealloc(ptr: *mut u8, size: usize, align: usize) {
-    unsafe { ALLOCATOR.dealloc(ptr, Layout::from_size_align_unchecked(size, align)) }
-}
-
-#[no_mangle]
-pub extern "C" fn __rust_realloc(
-    ptr: *mut u8,
-    old_size: usize,
-    size: usize,
-    align: usize,
-) -> *mut u8 {
-    unsafe {
-        ALLOCATOR.realloc(
-            ptr,
-            Layout::from_size_align_unchecked(old_size, align),
-            size,
-        )
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn __rust_alloc_zeroed(size: usize, align: usize) -> *mut u8 {
-    unsafe { ALLOCATOR.alloc_zeroed(Layout::from_size_align_unchecked(size, align)) }
-}
-
-#[no_mangle]
-pub extern "C" fn __rust_alloc_error_handler(_: Layout) -> ! {
-    core::intrinsics::abort()
 }

@@ -1,0 +1,11 @@
+[package]
+name = "sqlite_browser"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "sqlite_browser"
+crate-type = ["rlib"]
+
+[dependencies]
+sqlite_nostd = { path="../"}

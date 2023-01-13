@@ -275,33 +275,6 @@ pub fn create_function_v2(
     destroy: Option<unsafe extern "C" fn(*mut c_void)>,
 ) -> c_int {
     unsafe {
-        // SQLITE3_API is null when -DOMIT_LOAD_EXTENSION flag is set
-        // in that case we're statically linked directly and can reference
-        // the function directly
-        // match (*SQLITE3_API).create_function_v2 {
-        //     None => bindings::sqlite3_create_function_v2(
-        //         db,
-        //         s,
-        //         argc,
-        //         i32::try_from(flags).expect("Invalid flags"),
-        //         p_app,
-        //         x_func,
-        //         x_step,
-        //         x_final,
-        //         destroy,
-        //     ),
-        //     Some(f) => f(
-        //         db,
-        //         s,
-        //         argc,
-        //         i32::try_from(flags).expect("Invalid flags"),
-        //         p_app,
-        //         x_func,
-        //         x_step,
-        //         x_final,
-        //         destroy,
-        //     ),
-        // }
         ((*SQLITE3_API).create_function_v2.expect(EXPECT_MESSAGE))(
             db,
             s,
@@ -335,22 +308,3 @@ pub fn vtab_distinct(index_info: *mut bindings::sqlite3_index_info) -> i32 {
 pub fn sqlitex_declare_vtab(db: *mut bindings::sqlite3, s: *const i8) -> i32 {
     unsafe { ((*SQLITE3_API).declare_vtab.expect(EXPECT_MESSAGE))(db, s) }
 }
-
-// we don't need this... right? It's just overcomplicating what only need to be a call to `SQLITE_EXTENSION_INIT2`
-// pub fn start_extension<F>(
-//     db: *mut bindings::sqlite3,
-//     _pz_err_msg: *mut *mut c_char,
-//     p_api: *mut bindings::api_routines,
-//     callback: F,
-// ) -> c_uint
-// where
-//     F: Fn(*mut bindings::sqlite3) -> Result<(), Error>,
-// {
-//     unsafe {
-//         faux_sqlite_extension_init2(p_api);
-//     }
-//     match callback(db) {
-//         Ok(()) => SQLITE_OK,
-//         Err(err) => err.code(),
-//     }
-// }
