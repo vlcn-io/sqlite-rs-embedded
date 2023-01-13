@@ -9,11 +9,6 @@ use sqlite_nostd::SQLite3Allocator;
 #[global_allocator]
 static ALLOCATOR: SQLite3Allocator = SQLite3Allocator {};
 
-// TODO: include a function against which we can
-// inject an arbitrary number of extension functions.
-// this way we never need to alter the `core_init` of the
-// wasm sqlite targets.
-
 use core::panic::PanicInfo;
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
@@ -60,4 +55,21 @@ pub extern "C" fn __rust_alloc_zeroed(size: usize, align: usize) -> *mut u8 {
 #[no_mangle]
 pub extern "C" fn __rust_alloc_error_handler(_: Layout) -> ! {
     core::intrinsics::abort()
+}
+
+// TODO: allow registration of ext functions from
+// crates using this one
+pub fn register_extension() {}
+
+#[no_mangle]
+pub extern "C" fn sqlite3_sqlitebrowser_init(
+    db: *mut sqlite::sqlite3,
+    _err_msg: *mut *mut c_char,
+    api: *mut sqlite::api_routines,
+) -> u32 {
+    sqlite::EXTENSION_INIT2(api);
+
+    // todo: call reigstered functions here
+
+    OK
 }

@@ -2,6 +2,8 @@
 #![feature(alloc_error_handler)]
 #![feature(core_intrinsics)]
 
+// todo: make this example just an example in the browser crate
+
 use core::ffi::c_char;
 use sqlite_browser as sqlite;
 
@@ -38,6 +40,7 @@ pub extern "C" fn testext_fn(
         .unwrap_or_else(|_| sqlite::result_error(ctx, "oom").unwrap());
 }
 
+// TODO: register with sqlite::register_extension
 #[no_mangle]
 pub extern "C" fn sqlite3_nostdextension_init(
     db: *mut sqlite::sqlite3,
