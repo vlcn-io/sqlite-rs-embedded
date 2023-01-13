@@ -6,6 +6,7 @@ use core::ffi::c_char;
 use sqlite_nostd as sqlite;
 use sqlite_nostd::SQLite3Allocator;
 
+use core::alloc::GlobalAlloc;
 #[global_allocator]
 static ALLOCATOR: SQLite3Allocator = SQLite3Allocator {};
 
@@ -15,12 +16,21 @@ pub extern "C" fn testext_fn(
     _argc: i32,
     _argv: *mut *mut sqlite::value,
 ) {
-    sqlite::result_text(
-        ctx,
-        "Hello, world!\0".as_ptr() as *const c_char,
-        -1,
-        sqlite::Destructor::TRANSIENT,
-    );
+    // let args = sqlite::args!(argc, argv);
+    // Static strings:
+    // sqlite::result_text(
+    //     ctx,
+    //     sqlite::strlit!("Hello, world!"),
+    //     -1,
+    //     sqlite::Destructor::STATIC,
+    // );
+
+    // Dynamic strings:
+    sqlite::strdyn("Hello, world!")
+        .map(|s| sqlite::result_text(ctx, s.as_ptr(), -1, sqlite::Destructor::TRANSIENT))
+        .unwrap_or_else(|_| sqlite::result_error(ctx, "oom").unwrap());
+
+    // Dynamic strings with custom deallocator:
 }
 
 #[no_mangle]
@@ -60,4 +70,36 @@ use core::alloc::Layout;
 #[alloc_error_handler]
 fn oom(_: Layout) -> ! {
     core::intrinsics::abort()
+}
+
+#[no_mangle]
+pub extern "C" fn __rust_alloc(size: usize, align: usize) -> *mut u8 {
+    unsafe { ALLOCATOR.alloc(Layout::from_size_align_unchecked(size, align)) }
+}
+
+#[no_mangle]
+pub extern "C" fn __rust_dealloc(ptr: *mut u8, old_size: usize, align: usize) {
+    unsafe { ALLOCATOR.dealloc(ptr, Layout::from_size_align_unchecked(old_size, align)) }
+}
+
+#[no_mangle]
+pub extern "C" fn __rust_realloc(
+    ptr: *mut u8,
+    old_size: usize,
+    size: usize,
+    align: usize,
+) -> *mut u8 {
+    unsafe {
+        ALLOCATOR.realloc(
+            ptr,
+            Layout::from_size_align_unchecked(old_size, align),
+            size,
+            align,
+        )
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn __rust_alloc_zeroed(size: usize, align: usize) -> *mut u8 {
+    unsafe { ALLOCATOR.alloc_zeroed(Layout::from_size_align_unchecked(size, align)) }
 }

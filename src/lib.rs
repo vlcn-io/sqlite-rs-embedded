@@ -7,5 +7,6 @@ pub use sqlite3_capi::*;
  * - strlit() -- c literal string
  * - SQLITE_TRANSIENT
  * - SQLITE_STATIC
- * -
+ * - new string allocation
+ * - unsafe callback function wrapping
  */

@@ -12,17 +12,35 @@ pub use bindings::{
     sqlite3_value as value, SQLITE_INNOCUOUS as INNOCUOUS, SQLITE_OK as OK, SQLITE_UTF8 as UTF8,
 };
 
+extern crate alloc;
+
+use alloc::ffi::{CString, NulError};
+use core::ffi::{c_char, c_int, c_uchar, c_void};
+use core::ptr;
+
 pub enum Destructor {
     TRANSIENT,
     STATIC,
     CUSTOM(unsafe extern "C" fn(*mut c_void)),
 }
 
-extern crate alloc;
+#[macro_export]
+macro_rules! strlit {
+    ($s:expr) => {
+        concat!($s, "\0").as_ptr() as *const c_char
+    };
+}
 
-use alloc::ffi::{CString, NulError};
-use core::ffi::{c_char, c_int, c_uchar, c_void};
-use core::ptr;
+pub fn strdyn(s: &str) -> Result<CString, NulError> {
+    CString::new(s)
+}
+
+#[macro_export]
+macro_rules! args {
+    ($argc:expr, $argv:expr) => {
+        unsafe { slice::from_raw_parts($argv, $argc as usize) }
+    };
+}
 
 // macro emulation: https://github.com/asg017/sqlite-loadable-rs/blob/main/src/ext.rs
 static mut SQLITE3_API: *mut api_routines = ptr::null_mut();
