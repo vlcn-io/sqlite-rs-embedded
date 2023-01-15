@@ -201,15 +201,12 @@ pub fn result_int(context: *mut context, v: c_int) {
     }
 }
 
-// TODO: expose a version that doesn't always require copying the blob.
-// I.e., a method that can take a destructor function for SQLite to call.
-pub fn result_blob(context: *mut context, blob: &[u8], d: Destructor) {
-    let len = blob.len() as c_int;
+pub fn result_blob(context: *mut context, b: *const u8, n: i32, d: Destructor) {
     unsafe {
         ((*SQLITE3_API).result_blob.expect(EXPECT_MESSAGE))(
             context,
-            blob.as_ptr().cast::<c_void>(),
-            len,
+            b as *const c_void,
+            n,
             match d {
                 Destructor::TRANSIENT => Some(core::mem::transmute(-1_isize)),
                 Destructor::STATIC => None,
@@ -218,6 +215,7 @@ pub fn result_blob(context: *mut context, blob: &[u8], d: Destructor) {
         );
     }
 }
+
 pub fn result_int64(context: *mut context, v: i64) {
     unsafe {
         ((*SQLITE3_API).result_int64.expect(EXPECT_MESSAGE))(context, v);
