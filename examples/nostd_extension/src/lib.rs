@@ -2,8 +2,10 @@
 #![feature(alloc_error_handler)]
 #![feature(core_intrinsics)]
 
+extern crate alloc;
 // todo: make this example just an example in the browser crate
 
+use alloc::string::String;
 use core::ffi::c_char;
 use sqlite_browser as sqlite;
 
@@ -15,22 +17,13 @@ pub extern "C" fn testext_fn(
 ) {
     // let args = sqlite::args!(argc, argv);
     // Static strings:
-    // sqlite::result_text(
-    //     ctx,
-    //     sqlite::strlit!("Hello, world!"),
-    //     -1,
-    //     sqlite::Destructor::STATIC,
-    // );
+    // sqlite::result_text_static(ctx, "Hello, world!");
 
-    // Dynamic strings:
-    // sqlite::strdyn("Hello, world!")
-    //     .map(|s| sqlite::result_text(ctx, s.as_ptr(), -1, sqlite::Destructor::TRANSIENT))
-    //     .unwrap_or_else(|_| sqlite::result_error(ctx, "oom").unwrap());
+    // Transient string slices:
+    // sqlite::result_text_shared(ctx, "Hello, world!");
 
     // Dynamic strings with custom deallocator:
-    sqlite::strdyn("Hello, worlddd!")
-        .map(|s| sqlite::result_text_owned(ctx, s, -1))
-        .unwrap_or_else(|_| sqlite::result_error(ctx, "oom").unwrap());
+    sqlite::result_text_owned(ctx, String::from("ello mate!"));
 }
 
 // TODO: register with sqlite::register_extension

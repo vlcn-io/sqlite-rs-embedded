@@ -69,13 +69,9 @@ macro_rules! strlit {
     };
 }
 
-pub fn strdyn(s: &str) -> Result<CString, NulError> {
-    CString::new(s)
-}
-
-pub extern "C" fn dropstr(ptr: *mut c_void) {
+pub extern "C" fn droprust(ptr: *mut c_void) {
     unsafe {
-        let _ = CString::from_raw(ptr as *mut c_char);
+        ptr.drop_in_place();
     }
 }
 
