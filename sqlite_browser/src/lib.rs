@@ -64,7 +64,7 @@ pub fn register_extension() {}
 
 #[no_mangle]
 pub extern "C" fn sqlite3_sqlitebrowser_init(
-    db: *mut sqlite3,
+    _db: *mut sqlite3,
     _err_msg: *mut *mut c_char,
     api: *mut api_routines,
 ) -> u32 {

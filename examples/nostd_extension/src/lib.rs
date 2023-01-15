@@ -6,7 +6,9 @@ extern crate alloc;
 // todo: make this example just an example in the browser crate
 
 use alloc::string::String;
+use alloc::vec;
 use core::ffi::c_char;
+use sqlite::Context;
 use sqlite_browser as sqlite;
 
 #[no_mangle]
@@ -23,7 +25,7 @@ pub extern "C" fn testext_fn(
     // sqlite::result_text_shared(ctx, "Hello, world!");
 
     // Dynamic strings with custom deallocator:
-    sqlite::result_text_owned(ctx, String::from("ello mate!"));
+    ctx.result_text_owned(String::from("ello mate!"));
 }
 
 // TODO: register with sqlite::register_extension

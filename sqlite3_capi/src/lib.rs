@@ -10,12 +10,12 @@ pub mod bindings {
 
 pub use bindings::{
     sqlite3, sqlite3_api_routines as api_routines, sqlite3_context as context,
-    sqlite3_value as value, SQLITE_ABORT as ABORT, SQLITE_ALTER_TABLE as ALTER_TABLE,
-    SQLITE_ANALYZE as ANALYZE, SQLITE_ATTACH as ATTACH, SQLITE_AUTH as AUTH, SQLITE_BLOB as BLOB,
-    SQLITE_BUSY as BUSY, SQLITE_CANTOPEN as CANTOPEN, SQLITE_CONSTRAINT as CONSTRAINT,
-    SQLITE_COPY as COPY, SQLITE_CORRUPT as CORRUPT, SQLITE_CREATE_INDEX as CREATE_INDEX,
-    SQLITE_CREATE_TABLE as CREATE_TABLE, SQLITE_CREATE_TEMP_INDEX as CREATE_TEMP_INDEX,
-    SQLITE_CREATE_TEMP_TABLE as CREATE_TEMP_TABLE,
+    sqlite3_stmt as stmt, sqlite3_value as value, SQLITE_ABORT as ABORT,
+    SQLITE_ALTER_TABLE as ALTER_TABLE, SQLITE_ANALYZE as ANALYZE, SQLITE_ATTACH as ATTACH,
+    SQLITE_AUTH as AUTH, SQLITE_BLOB as BLOB, SQLITE_BUSY as BUSY, SQLITE_CANTOPEN as CANTOPEN,
+    SQLITE_CONSTRAINT as CONSTRAINT, SQLITE_COPY as COPY, SQLITE_CORRUPT as CORRUPT,
+    SQLITE_CREATE_INDEX as CREATE_INDEX, SQLITE_CREATE_TABLE as CREATE_TABLE,
+    SQLITE_CREATE_TEMP_INDEX as CREATE_TEMP_INDEX, SQLITE_CREATE_TEMP_TABLE as CREATE_TEMP_TABLE,
     SQLITE_CREATE_TEMP_TRIGGER as CREATE_TEMP_TRIGGER, SQLITE_CREATE_TEMP_VIEW as CREATE_TEMP_VIEW,
     SQLITE_CREATE_TRIGGER as CREATE_TRIGGER, SQLITE_CREATE_VIEW as CREATE_VIEW,
     SQLITE_CREATE_VTABLE as CREATE_VTABLE, SQLITE_DELETE as DELETE, SQLITE_DENY as DENY,
@@ -141,31 +141,26 @@ pub fn value_blob<'a>(value: *mut value) -> &'a [u8] {
     }
 }
 
-pub fn bind_pointer(
-    db: *mut bindings::sqlite3_stmt,
-    i: i32,
-    p: *mut c_void,
-    t: *const c_char,
-) -> i32 {
+pub fn bind_pointer(db: *mut stmt, i: i32, p: *mut c_void, t: *const c_char) -> i32 {
     unsafe { ((*SQLITE3_API).bind_pointer.expect(EXPECT_MESSAGE))(db, i, p, t, None) }
 }
-pub fn step(stmt: *mut bindings::sqlite3_stmt) -> c_int {
+pub fn step(stmt: *mut stmt) -> c_int {
     unsafe { ((*SQLITE3_API).step.expect(EXPECT_MESSAGE))(stmt) }
 }
 
-pub fn finalize(stmt: *mut bindings::sqlite3_stmt) -> c_int {
+pub fn finalize(stmt: *mut stmt) -> c_int {
     unsafe { ((*SQLITE3_API).finalize.expect(EXPECT_MESSAGE))(stmt) }
 }
 
-pub fn column_text(stmt: *mut bindings::sqlite3_stmt, c: c_int) -> *const c_uchar {
+pub fn column_text(stmt: *mut stmt, c: c_int) -> *const c_uchar {
     unsafe { ((*SQLITE3_API).column_text.expect(EXPECT_MESSAGE))(stmt, c) }
 }
 
-pub fn column_value(stmt: *mut bindings::sqlite3_stmt, c: c_int) -> *mut value {
+pub fn column_value(stmt: *mut stmt, c: c_int) -> *mut value {
     unsafe { ((*SQLITE3_API).column_value.expect(EXPECT_MESSAGE))(stmt, c) }
 }
 
-pub fn bind_text(stmt: *mut bindings::sqlite3_stmt, c: c_int, s: *const c_char, n: c_int) -> i32 {
+pub fn bind_text(stmt: *mut stmt, c: c_int, s: *const c_char, n: c_int) -> i32 {
     unsafe { ((*SQLITE3_API).bind_text.expect(EXPECT_MESSAGE))(stmt, c, s, n, None) }
 }
 
@@ -173,7 +168,7 @@ pub fn prepare_v2(
     db: *mut bindings::sqlite3,
     sql: *const c_char,
     n: i32,
-    stmt: *mut *mut bindings::sqlite3_stmt,
+    stmt: *mut *mut stmt,
     leftover: *mut *const c_char,
 ) -> i32 {
     unsafe { ((*SQLITE3_API).prepare_v2.expect(EXPECT_MESSAGE))(db, sql, n, stmt, leftover) }
