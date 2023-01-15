@@ -28,15 +28,8 @@ pub extern "C" fn testext_fn(
     //     .unwrap_or_else(|_| sqlite::result_error(ctx, "oom").unwrap());
 
     // Dynamic strings with custom deallocator:
-    sqlite::strdyn("Hello, world!")
-        .map(|s| {
-            sqlite::result_text(
-                ctx,
-                s.into_raw(),
-                -1,
-                sqlite::Destructor::CUSTOM(sqlite::dropstr),
-            )
-        })
+    sqlite::strdyn("Hello, worlddd!")
+        .map(|s| sqlite::result_text_owned(ctx, s, -1))
         .unwrap_or_else(|_| sqlite::result_error(ctx, "oom").unwrap());
 }
 

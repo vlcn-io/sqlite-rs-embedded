@@ -5,6 +5,7 @@
 pub use sqlite_nostd::*;
 
 use core::alloc::GlobalAlloc;
+use core::ffi::c_char;
 use sqlite_nostd::SQLite3Allocator;
 #[global_allocator]
 static ALLOCATOR: SQLite3Allocator = SQLite3Allocator {};
@@ -63,11 +64,11 @@ pub fn register_extension() {}
 
 #[no_mangle]
 pub extern "C" fn sqlite3_sqlitebrowser_init(
-    db: *mut sqlite::sqlite3,
+    db: *mut sqlite3,
     _err_msg: *mut *mut c_char,
-    api: *mut sqlite::api_routines,
+    api: *mut api_routines,
 ) -> u32 {
-    sqlite::EXTENSION_INIT2(api);
+    EXTENSION_INIT2(api);
 
     // todo: call reigstered functions here
 
