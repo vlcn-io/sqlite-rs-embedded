@@ -50,7 +50,7 @@ pub use crate::bindings::{
 pub enum Destructor {
     TRANSIENT,
     STATIC,
-    CUSTOM(unsafe extern "C" fn(*mut c_void)),
+    CUSTOM(xDestroy),
 }
 
 #[macro_export]

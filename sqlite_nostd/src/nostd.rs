@@ -139,25 +139,14 @@ pub enum ColumnType {
     Null = 5,
 }
 
-pub struct Connection {
-    db: *mut sqlite3,
-}
-
-impl Connection {
-    pub fn from(db: *mut sqlite3) -> Connection {
-        return Connection { db };
-    }
-
-    pub fn commit_hook(
+pub trait Connection {
+    fn commit_hook(
         &self,
         callback: Option<xCommitHook>,
         user_data: *mut c_void,
-    ) -> Option<xCommitHook> {
-        commit_hook(self.db, callback, user_data)
-    }
+    ) -> Option<xCommitHook>;
 
-    /// name must be a properly null terminated c-string with a permanent lifetime.
-    pub fn create_function_v2(
+    fn create_function_v2(
         &self,
         name: *const c_char,
         n_arg: i32,
@@ -167,9 +156,34 @@ impl Connection {
         step: Option<xStep>,
         final_func: Option<xFinal>,
         destroy: Option<xDestroy>,
-    ) -> Result<(), ResultCode> {
+    ) -> Result<ResultCode, ResultCode>;
+
+    fn prepare_v2(&self, sql: &str) -> Result<Stmt, ResultCode>;
+}
+
+impl Connection for *mut sqlite3 {
+    fn commit_hook(
+        &self,
+        callback: Option<xCommitHook>,
+        user_data: *mut c_void,
+    ) -> Option<xCommitHook> {
+        commit_hook(*self, callback, user_data)
+    }
+
+    /// name must be a properly null terminated c-string with a permanent lifetime.
+    fn create_function_v2(
+        &self,
+        name: *const c_char,
+        n_arg: i32,
+        flags: u32,
+        user_data: Option<*mut c_void>,
+        func: Option<xFunc>,
+        step: Option<xStep>,
+        final_func: Option<xFinal>,
+        destroy: Option<xDestroy>,
+    ) -> Result<ResultCode, ResultCode> {
         let rc = ResultCode::from_i32(create_function_v2(
-            self.db,
+            *self,
             name,
             n_arg,
             flags,
@@ -181,17 +195,17 @@ impl Connection {
         ))
         .unwrap();
         if rc == ResultCode::OK {
-            Ok(())
+            Ok(ResultCode::OK)
         } else {
             Err(rc)
         }
     }
 
-    pub fn prepare_v2(&self, sql: &str) -> Result<Stmt<'_>, ResultCode> {
+    fn prepare_v2(&self, sql: &str) -> Result<Stmt, ResultCode> {
         let mut stmt = core::ptr::null_mut();
         let mut tail = core::ptr::null();
         let rc = ResultCode::from_i32(prepare_v2(
-            self.db,
+            *self,
             sql.as_ptr() as *const c_char,
             sql.len() as i32,
             &mut stmt as *mut *mut stmt,
@@ -199,28 +213,18 @@ impl Connection {
         ))
         .unwrap();
         if rc == ResultCode::OK {
-            Ok(Stmt {
-                _conn: self,
-                stmt: stmt,
-            })
+            Ok(Stmt { stmt: stmt })
         } else {
             Err(rc)
         }
     }
 }
 
-impl Drop for Connection {
-    fn drop(&mut self) {
-        close(self.db);
-    }
-}
-
-pub struct Stmt<'conn> {
-    _conn: &'conn Connection,
+pub struct Stmt {
     stmt: *mut stmt,
 }
 
-impl<'conn> Stmt<'conn> {
+impl Stmt {
     pub fn step(&self) -> Result<StepCode, ResultCode> {
         let rc = ResultCode::from_i32(step(self.stmt)).unwrap();
         if (rc == ResultCode::ROW) || (rc == ResultCode::DONE) {
@@ -290,7 +294,7 @@ impl<'conn> Stmt<'conn> {
     }
 }
 
-impl Drop for Stmt<'_> {
+impl Drop for Stmt {
     fn drop(&mut self) {
         finalize(self.stmt);
     }

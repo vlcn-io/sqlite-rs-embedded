@@ -1,7 +1,8 @@
 pub use sqlite_nostd::*;
 
+extern crate alloc;
+
 use core::alloc::GlobalAlloc;
-use core::ffi::c_char;
 use sqlite_nostd::SQLite3Allocator;
 #[global_allocator]
 static ALLOCATOR: SQLite3Allocator = SQLite3Allocator {};
@@ -53,21 +54,4 @@ pub extern "C" fn __rust_alloc_zeroed(size: usize, align: usize) -> *mut u8 {
 #[no_mangle]
 pub fn __rust_alloc_error_handler(_: Layout) -> ! {
     core::intrinsics::abort()
-}
-
-// TODO: allow registration of ext functions from
-// crates using this one
-pub fn register_extension() {}
-
-#[no_mangle]
-pub extern "C" fn sqlite3_sqlitebrowser_init(
-    _db: *mut sqlite3,
-    _err_msg: *mut *mut c_char,
-    api: *mut api_routines,
-) -> u32 {
-    EXTENSION_INIT2(api);
-
-    // todo: call reigstered functions here
-
-    OK
 }
