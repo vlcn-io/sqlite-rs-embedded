@@ -9,7 +9,12 @@ use alloc::string::String;
 // use alloc::vec;
 use core::ffi::c_char;
 use sqlite::Context;
+
+#[cfg(target_family = "wasm")]
 use sqlite_web as sqlite;
+
+#[cfg(not(target_family = "wasm"))]
+use sqlite_nostd as sqlite;
 
 #[no_mangle]
 pub extern "C" fn testext_fn(
@@ -37,15 +42,11 @@ pub extern "C" fn sqlite3_nostdextension_init(
 ) -> u32 {
     sqlite::EXTENSION_INIT2(api);
 
-    // register a function extension
-    // use some collections inside the function
-    // return a string to test allocation
-    sqlite::create_function_v2(
-        db,
+    sqlite::Connection::from(db).create_function_v2(
         sqlite::strlit!("testit"),
         0,
         sqlite::UTF8,
-        core::ptr::null_mut(),
+        None,
         Some(testext_fn),
         None,
         None,

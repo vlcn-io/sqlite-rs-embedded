@@ -10,8 +10,11 @@ license = "MIT"
 name = "nostd_extension"
 crate-type = ["cdylib"]
 
-[dependencies]
+[target.'cfg(target_family = "wasm")'.dependencies]
 sqlite_web = { path="../../sqlite_web"}
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+sqlite_nostd = { path="../../sqlite_nostd"}
 
 [profile.dev]
 panic = "abort"

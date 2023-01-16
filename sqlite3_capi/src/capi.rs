@@ -102,6 +102,18 @@ pub fn free(ptr: *mut u8) {
     }
 }
 
+pub type xCommitHook = unsafe extern "C" fn(*mut c_void) -> i32;
+pub fn commit_hook(
+    db: *mut sqlite3,
+    callback: Option<xCommitHook>,
+    user_data: *mut c_void,
+) -> Option<xCommitHook> {
+    unsafe {
+        let ptr = ((*SQLITE3_API).commit_hook.expect(EXPECT_MESSAGE))(db, callback, user_data);
+        ptr.as_ref().map(|p| core::mem::transmute(p))
+    }
+}
+
 // pub fn mprintf(format: *const i8, ...) -> *mut c_char {
 //     unsafe { ((*SQLITE3_API).mprintf.expect(EXPECT_MESSAGE))(format, args) }
 // }
@@ -315,16 +327,20 @@ pub fn get_auxdata(context: *mut context, n: c_int) -> *mut c_void {
     unsafe { ((*SQLITE3_API).get_auxdata.expect(EXPECT_MESSAGE))(context, n) }
 }
 
+pub type xFunc = unsafe extern "C" fn(*mut context, i32, *mut *mut value);
+pub type xStep = unsafe extern "C" fn(*mut context, i32, *mut *mut value);
+pub type xFinal = unsafe extern "C" fn(*mut context);
+pub type xDestroy = unsafe extern "C" fn(*mut c_void);
 pub fn create_function_v2(
     db: *mut sqlite3,
     s: *const c_char,
     argc: i32,
     flags: u32,
     p_app: *mut c_void,
-    x_func: Option<unsafe extern "C" fn(*mut context, i32, *mut *mut value)>,
-    x_step: Option<unsafe extern "C" fn(*mut context, i32, *mut *mut value)>,
-    x_final: Option<unsafe extern "C" fn(*mut context)>,
-    destroy: Option<unsafe extern "C" fn(*mut c_void)>,
+    x_func: Option<xFunc>,
+    x_step: Option<xStep>,
+    x_final: Option<xFinal>,
+    destroy: Option<xDestroy>,
 ) -> c_int {
     unsafe {
         ((*SQLITE3_API).create_function_v2.expect(EXPECT_MESSAGE))(
@@ -359,4 +375,8 @@ pub fn vtab_distinct(index_info: *mut index_info) -> i32 {
 
 pub fn sqlitex_declare_vtab(db: *mut sqlite3, s: *const i8) -> i32 {
     unsafe { ((*SQLITE3_API).declare_vtab.expect(EXPECT_MESSAGE))(db, s) }
+}
+
+pub fn close(db: *mut sqlite3) -> i32 {
+    unsafe { ((*SQLITE3_API).close.expect(EXPECT_MESSAGE))(db) }
 }

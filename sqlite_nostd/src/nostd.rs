@@ -2,7 +2,7 @@ extern crate alloc;
 
 use alloc::string::String;
 use alloc::vec::Vec;
-use core::ffi::c_char;
+use core::ffi::{c_char, c_void};
 
 #[cfg(not(feature = "std"))]
 use num_derive::FromPrimitive;
@@ -144,6 +144,49 @@ pub struct Connection {
 }
 
 impl Connection {
+    pub fn from(db: *mut sqlite3) -> Connection {
+        return Connection { db };
+    }
+
+    pub fn commit_hook(
+        &self,
+        callback: Option<xCommitHook>,
+        user_data: *mut c_void,
+    ) -> Option<xCommitHook> {
+        commit_hook(self.db, callback, user_data)
+    }
+
+    /// name must be a properly null terminated c-string with a permanent lifetime.
+    pub fn create_function_v2(
+        &self,
+        name: *const c_char,
+        n_arg: i32,
+        flags: u32,
+        user_data: Option<*mut c_void>,
+        func: Option<xFunc>,
+        step: Option<xStep>,
+        final_func: Option<xFinal>,
+        destroy: Option<xDestroy>,
+    ) -> Result<(), ResultCode> {
+        let rc = ResultCode::from_i32(create_function_v2(
+            self.db,
+            name,
+            n_arg,
+            flags,
+            user_data.unwrap_or(core::ptr::null_mut()),
+            func,
+            step,
+            final_func,
+            destroy,
+        ))
+        .unwrap();
+        if rc == ResultCode::OK {
+            Ok(())
+        } else {
+            Err(rc)
+        }
+    }
+
     pub fn prepare_v2(&self, sql: &str) -> Result<Stmt<'_>, ResultCode> {
         let mut stmt = core::ptr::null_mut();
         let mut tail = core::ptr::null();
@@ -157,7 +200,7 @@ impl Connection {
         .unwrap();
         if rc == ResultCode::OK {
             Ok(Stmt {
-                conn: self,
+                _conn: self,
                 stmt: stmt,
             })
         } else {
@@ -166,24 +209,16 @@ impl Connection {
     }
 }
 
-pub struct Stmt<'conn> {
-    conn: &'conn Connection,
-    stmt: *mut stmt,
+impl Drop for Connection {
+    fn drop(&mut self) {
+        close(self.db);
+    }
 }
 
-// pub trait Stmt<'a> {
-//     // TODO: step should be a result as only two result codes are not
-//     // errors for step
-//     fn step(&self) -> ResultCode;
-//     fn column_count(&self) -> i32;
-//     fn column_name(&self, i: i32) -> Result<&'a str, ResultCode>;
-//     fn column_type(&self, i: i32) -> Result<ColumnType, ResultCode>;
-//     fn column_text(&self, i: i32) -> Result<&'a str, ResultCode>;
-//     fn column_blob(&self, i: i32) -> Result<&'a [u8], ResultCode>;
-//     fn column_double(&self, i: i32) -> Result<f64, ResultCode>;
-//     fn column_int(&self, i: i32) -> Result<i32, ResultCode>;
-//     fn column_int64(&self, i: i32) -> Result<i64, ResultCode>;
-// }
+pub struct Stmt<'conn> {
+    _conn: &'conn Connection,
+    stmt: *mut stmt,
+}
 
 impl<'conn> Stmt<'conn> {
     pub fn step(&self) -> Result<StepCode, ResultCode> {
@@ -307,6 +342,8 @@ impl Context for *mut context {
         );
     }
 
+    /// Passes ownership of the blob to SQLite without copying.
+    /// SQLite will drop the blob when it is finished with it.
     fn result_blob_owned(&self, blob: Vec<u8>) {
         let (ptr, len, _) = blob.into_raw_parts();
         result_blob(*self, ptr, len as i32, Destructor::CUSTOM(droprust));
