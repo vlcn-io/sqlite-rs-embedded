@@ -11,7 +11,7 @@ name = "nostd_extension"
 crate-type = ["cdylib"]
 
 [dependencies]
-sqlite_browser = { path="../../sqlite_browser"}
+sqlite_web = { path="../../sqlite_web"}
 
 [profile.dev]
 panic = "abort"

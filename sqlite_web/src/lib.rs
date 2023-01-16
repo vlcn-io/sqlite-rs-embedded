@@ -54,7 +54,7 @@ pub extern "C" fn __rust_alloc_zeroed(size: usize, align: usize) -> *mut u8 {
 }
 
 #[no_mangle]
-pub extern "C" fn __rust_alloc_error_handler(_: Layout) -> ! {
+pub fn __rust_alloc_error_handler(_: Layout) -> ! {
     core::intrinsics::abort()
 }
 

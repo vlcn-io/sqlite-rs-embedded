@@ -131,7 +131,7 @@ dependencies = [
 name = "nostd_extension"
 version = "0.1.0"
 dependencies = [
- "sqlite_browser",
+ "sqlite_web",
 ]
 
 [[package]]
@@ -206,18 +206,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "sqlite_browser"
-version = "0.1.0"
-dependencies = [
- "sqlite_nostd",
-]
-
-[[package]]
 name = "sqlite_nostd"
 version = "0.1.0"
 dependencies = [
  "sqlite3_allocator",
  "sqlite3_capi",
+]
+
+[[package]]
+name = "sqlite_web"
+version = "0.1.0"
+dependencies = [
+ "sqlite_nostd",
 ]
 
 [[package]]

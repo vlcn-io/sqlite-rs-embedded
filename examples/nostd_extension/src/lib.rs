@@ -6,10 +6,10 @@ extern crate alloc;
 // todo: make this example just an example in the browser crate
 
 use alloc::string::String;
-use alloc::vec;
+// use alloc::vec;
 use core::ffi::c_char;
 use sqlite::Context;
-use sqlite_browser as sqlite;
+use sqlite_web as sqlite;
 
 #[no_mangle]
 pub extern "C" fn testext_fn(
@@ -42,7 +42,7 @@ pub extern "C" fn sqlite3_nostdextension_init(
     // return a string to test allocation
     sqlite::create_function_v2(
         db,
-        "testit\0".as_ptr() as *const c_char,
+        sqlite::strlit!("testit"),
         0,
         sqlite::UTF8,
         core::ptr::null_mut(),

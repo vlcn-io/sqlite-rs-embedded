@@ -1,5 +1,12 @@
-# sqlite_nostd
+# SQLite no_std
 
-Existing Rust bindings for SQLite require the use of `std`. This isn't great when you need to target embedded environments (environments where SQLite often runs!) or WASM.
+SQLite is lite. Its bindings should be lite too. They shold be able to be used _anywhere_ SQLite is used, _not_ incur any performance impact, _not_ include any extra dependencies, and be usable against _any_ SQLite version.
 
-sqlite_nostd is a set of Rust bindings for SQLite that do not require the `std` crate.
+Thus this repository was born.
+
+These bindings:
+
+- Do not require the rust standard library
+- Use the SQLite memory subsystem if no allocator exists
+- Can be used to write SQLite extensions that compile to WASM and run in the browser
+- Does 0 copying. E.g., through some tricks, Rust strings are passed directly to SQLite with no conversion to or copying to CString.
