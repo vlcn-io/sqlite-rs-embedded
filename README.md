@@ -1,6 +1,6 @@
 # SQLite no_std
 
-SQLite is lite. Its bindings should be lite too. They shold be able to be used _anywhere_ SQLite is used, _not_ incur any performance impact, _not_ include any extra dependencies, and be usable against _any_ SQLite version.
+SQLite is lite. Its bindings should be lite too. They should be able to be used _anywhere_ SQLite is used, _not_ incur any performance impact, _not_ include any extra dependencies, and be usable against _any_ SQLite version.
 
 Thus this repository was born.
 
