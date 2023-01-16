@@ -1,6 +1,5 @@
 extern crate alloc;
 
-use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::ffi::c_char;
@@ -13,16 +12,7 @@ use num_traits::FromPrimitive;
 pub use sqlite3_allocator::*;
 pub use sqlite3_capi::*;
 
-// pub struct Stmt {
-//     /// Internal pointer to the C stmt
-//     stmt: *mut stmt,
-// }
-
-pub trait DB<'a> {
-    fn prepare_v2(&self, sql: &str) -> Result<Box<dyn Stmt<'a>>, ResultCode>;
-}
-
-#[derive(FromPrimitive)]
+#[derive(FromPrimitive, PartialEq)]
 pub enum ResultCode {
     OK = 0,
     ERROR = 1,
@@ -134,7 +124,13 @@ pub enum ResultCode {
     NULL = 5000,
 }
 
-#[derive(FromPrimitive)]
+#[derive(FromPrimitive, PartialEq)]
+pub enum StepCode {
+    Row = bindings::SQLITE_ROW as isize,
+    Done = bindings::SQLITE_DONE as isize,
+}
+
+#[derive(FromPrimitive, PartialEq)]
 pub enum ColumnType {
     Integer = 1,
     Float = 2,
@@ -143,31 +139,71 @@ pub enum ColumnType {
     Null = 5,
 }
 
-pub trait Stmt<'a> {
-    // TODO: step should be a result as only two result codes are not
-    // errors for step
-    fn step(&self) -> ResultCode;
-    fn column_count(&self) -> i32;
-    fn column_name(&self, i: i32) -> Result<&'a str, ResultCode>;
-    fn column_type(&self, i: i32) -> Result<ColumnType, ResultCode>;
-    fn column_text(&self, i: i32) -> Result<&'a str, ResultCode>;
-    fn column_blob(&self, i: i32) -> Result<&'a [u8], ResultCode>;
-    fn column_double(&self, i: i32) -> Result<f64, ResultCode>;
-    fn column_int(&self, i: i32) -> Result<i32, ResultCode>;
-    fn column_int64(&self, i: i32) -> Result<i64, ResultCode>;
+pub struct Connection {
+    db: *mut sqlite3,
 }
 
-impl<'a> Stmt<'a> for *mut stmt {
-    fn step(&self) -> ResultCode {
-        ResultCode::from_i32(step(*self)).unwrap()
+impl Connection {
+    pub fn prepare_v2(&self, sql: &str) -> Result<Stmt<'_>, ResultCode> {
+        let mut stmt = core::ptr::null_mut();
+        let mut tail = core::ptr::null();
+        let rc = ResultCode::from_i32(prepare_v2(
+            self.db,
+            sql.as_ptr() as *const c_char,
+            sql.len() as i32,
+            &mut stmt as *mut *mut stmt,
+            &mut tail as *mut *const c_char,
+        ))
+        .unwrap();
+        if rc == ResultCode::OK {
+            Ok(Stmt {
+                conn: self,
+                stmt: stmt,
+            })
+        } else {
+            Err(rc)
+        }
+    }
+}
+
+pub struct Stmt<'conn> {
+    conn: &'conn Connection,
+    stmt: *mut stmt,
+}
+
+// pub trait Stmt<'a> {
+//     // TODO: step should be a result as only two result codes are not
+//     // errors for step
+//     fn step(&self) -> ResultCode;
+//     fn column_count(&self) -> i32;
+//     fn column_name(&self, i: i32) -> Result<&'a str, ResultCode>;
+//     fn column_type(&self, i: i32) -> Result<ColumnType, ResultCode>;
+//     fn column_text(&self, i: i32) -> Result<&'a str, ResultCode>;
+//     fn column_blob(&self, i: i32) -> Result<&'a [u8], ResultCode>;
+//     fn column_double(&self, i: i32) -> Result<f64, ResultCode>;
+//     fn column_int(&self, i: i32) -> Result<i32, ResultCode>;
+//     fn column_int64(&self, i: i32) -> Result<i64, ResultCode>;
+// }
+
+impl<'conn> Stmt<'conn> {
+    pub fn step(&self) -> Result<StepCode, ResultCode> {
+        let rc = ResultCode::from_i32(step(self.stmt)).unwrap();
+        if (rc == ResultCode::ROW) || (rc == ResultCode::DONE) {
+            Ok(StepCode::from_i32(rc as i32).unwrap())
+        } else {
+            Err(rc)
+        }
     }
 
-    fn column_count(&self) -> i32 {
-        column_count(*self)
+    pub fn column_count(&self) -> i32 {
+        column_count(self.stmt)
     }
 
-    fn column_name(&self, i: i32) -> Result<&'a str, ResultCode> {
-        let ptr = column_name(*self, i);
+    /// Calls to `step` or addiitonal calls to `column_name` will invalidate the
+    /// returned string. Unclear if there's any way to capture this
+    /// behavior in the type system.
+    pub fn column_name(&self, i: i32) -> Result<&str, ResultCode> {
+        let ptr = column_name(self.stmt, i);
         if ptr.is_null() {
             Err(ResultCode::NULL)
         } else {
@@ -179,12 +215,12 @@ impl<'a> Stmt<'a> for *mut stmt {
         }
     }
 
-    fn column_type(&self, i: i32) -> Result<ColumnType, ResultCode> {
-        ColumnType::from_i32(column_type(*self, i)).ok_or(ResultCode::NULL)
+    pub fn column_type(&self, i: i32) -> Result<ColumnType, ResultCode> {
+        ColumnType::from_i32(column_type(self.stmt, i)).ok_or(ResultCode::NULL)
     }
 
-    fn column_text(&self, i: i32) -> Result<&'a str, ResultCode> {
-        let ptr = column_text(*self, i);
+    pub fn column_text(&self, i: i32) -> Result<&str, ResultCode> {
+        let ptr = column_text(self.stmt, i);
         if ptr.is_null() {
             Err(ResultCode::NULL)
         } else {
@@ -196,9 +232,9 @@ impl<'a> Stmt<'a> for *mut stmt {
         }
     }
 
-    fn column_blob(&self, i: i32) -> Result<&'a [u8], ResultCode> {
-        let len = column_bytes(*self, i);
-        let ptr = column_blob(*self, i);
+    pub fn column_blob(&self, i: i32) -> Result<&[u8], ResultCode> {
+        let len = column_bytes(self.stmt, i);
+        let ptr = column_blob(self.stmt, i);
         if ptr.is_null() {
             Err(ResultCode::NULL)
         } else {
@@ -206,24 +242,24 @@ impl<'a> Stmt<'a> for *mut stmt {
         }
     }
 
-    fn column_double(&self, i: i32) -> Result<f64, ResultCode> {
-        Ok(column_double(*self, i))
+    pub fn column_double(&self, i: i32) -> Result<f64, ResultCode> {
+        Ok(column_double(self.stmt, i))
     }
 
-    fn column_int(&self, i: i32) -> Result<i32, ResultCode> {
-        Ok(column_int(*self, i))
+    pub fn column_int(&self, i: i32) -> Result<i32, ResultCode> {
+        Ok(column_int(self.stmt, i))
     }
 
-    fn column_int64(&self, i: i32) -> Result<i64, ResultCode> {
-        Ok(column_int64(*self, i))
+    pub fn column_int64(&self, i: i32) -> Result<i64, ResultCode> {
+        Ok(column_int64(self.stmt, i))
     }
 }
 
-// impl Drop for *mut stmt {
-//     fn drop(&mut self) {
-//         finalize(*self);
-//     }
-// }
+impl Drop for Stmt<'_> {
+    fn drop(&mut self) {
+        finalize(self.stmt);
+    }
+}
 
 pub trait Context {
     /// Pass and give ownership of the string to SQLite.
