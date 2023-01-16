@@ -152,12 +152,32 @@ pub fn finalize(stmt: *mut stmt) -> c_int {
     unsafe { ((*SQLITE3_API).finalize.expect(EXPECT_MESSAGE))(stmt) }
 }
 
+pub fn column_type(stmt: *mut stmt, c: c_int) -> i32 {
+    unsafe { ((*SQLITE3_API).column_type.expect(EXPECT_MESSAGE))(stmt, c) }
+}
+
+pub fn column_count(stmt: *mut stmt) -> i32 {
+    unsafe { ((*SQLITE3_API).column_count.expect(EXPECT_MESSAGE))(stmt) }
+}
+
 pub fn column_text(stmt: *mut stmt, c: c_int) -> *const c_uchar {
     unsafe { ((*SQLITE3_API).column_text.expect(EXPECT_MESSAGE))(stmt, c) }
 }
 
+pub fn column_blob(stmt: *mut stmt, c: c_int) -> *const c_void {
+    unsafe { ((*SQLITE3_API).column_blob.expect(EXPECT_MESSAGE))(stmt, c) }
+}
+
+pub fn column_bytes(stmt: *mut stmt, c: c_int) -> i32 {
+    unsafe { ((*SQLITE3_API).column_bytes.expect(EXPECT_MESSAGE))(stmt, c) }
+}
+
 pub fn column_value(stmt: *mut stmt, c: c_int) -> *mut value {
     unsafe { ((*SQLITE3_API).column_value.expect(EXPECT_MESSAGE))(stmt, c) }
+}
+
+pub fn column_name(stmt: *mut stmt, c: c_int) -> *const c_char {
+    unsafe { ((*SQLITE3_API).column_name.expect(EXPECT_MESSAGE))(stmt, c) }
 }
 
 pub fn bind_text(stmt: *mut stmt, c: c_int, s: *const c_char, n: c_int) -> i32 {

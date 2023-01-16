@@ -10,3 +10,5 @@ crate-type = ["rlib"]
 [dependencies]
 sqlite3_capi = { path="../sqlite3_capi"}
 sqlite3_allocator = { path="../sqlite3_allocator" }
+num-traits = "0.2"
+num-derive = "0.3"
