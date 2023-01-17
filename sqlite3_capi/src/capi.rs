@@ -4,6 +4,9 @@ use alloc::ffi::{CString, NulError};
 use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
+#[cfg(feature = "omit_load_extension")]
+use crate::bindings;
+
 pub use crate::bindings::{
     sqlite3, sqlite3_api_routines as api_routines, sqlite3_context as context,
     sqlite3_index_info as index_info, sqlite3_module as module, sqlite3_stmt as stmt,
@@ -87,18 +90,41 @@ static EXPECT_MESSAGE: &str =
 pub fn malloc(size: usize) -> *mut u8 {
     unsafe {
         if usize::BITS == 64 {
-            let ptr = ((*SQLITE3_API).malloc64.expect(EXPECT_MESSAGE))(size as uint64);
-            ptr as *mut u8
+            #[cfg(feature = "omit_load_extension")]
+            {
+                let ptr = bindings::sqlite3_malloc64(size as uint64);
+                ptr as *mut u8
+            }
+            #[cfg(not(feature = "omit_load_extension"))]
+            {
+                let ptr = ((*SQLITE3_API).malloc64.expect(EXPECT_MESSAGE))(size as uint64);
+                ptr as *mut u8
+            }
         } else {
-            let ptr = ((*SQLITE3_API).malloc.expect(EXPECT_MESSAGE))(size as i32);
-            ptr as *mut u8
+            #[cfg(feature = "omit_load_extension")]
+            {
+                let ptr = bindings::sqlite3_malloc(size as i32);
+                ptr as *mut u8
+            }
+            #[cfg(not(feature = "omit_load_extension"))]
+            {
+                let ptr = ((*SQLITE3_API).malloc.expect(EXPECT_MESSAGE))(size as i32);
+                ptr as *mut u8
+            }
         }
     }
 }
 
 pub fn free(ptr: *mut u8) {
     unsafe {
-        ((*SQLITE3_API).free.expect(EXPECT_MESSAGE))(ptr as *mut c_void);
+        #[cfg(feature = "omit_load_extension")]
+        {
+            bindings::sqlite3_free(ptr as *mut c_void);
+        }
+        #[cfg(not(feature = "omit_load_extension"))]
+        {
+            ((*SQLITE3_API).free.expect(EXPECT_MESSAGE))(ptr as *mut c_void);
+        }
     }
 }
 
@@ -343,17 +369,34 @@ pub fn create_function_v2(
     destroy: Option<xDestroy>,
 ) -> c_int {
     unsafe {
-        ((*SQLITE3_API).create_function_v2.expect(EXPECT_MESSAGE))(
-            db,
-            s,
-            argc,
-            i32::try_from(flags).expect("Invalid flags"),
-            p_app,
-            x_func,
-            x_step,
-            x_final,
-            destroy,
-        )
+        #[cfg(feature = "omit_load_extension")]
+        {
+            bindings::sqlite3_create_function_v2(
+                db,
+                s,
+                argc,
+                i32::try_from(flags).expect("Invalid flags"),
+                p_app,
+                x_func,
+                x_step,
+                x_final,
+                destroy,
+            )
+        }
+        #[cfg(not(feature = "omit_load_extension"))]
+        {
+            ((*SQLITE3_API).create_function_v2.expect(EXPECT_MESSAGE))(
+                db,
+                s,
+                argc,
+                i32::try_from(flags).expect("Invalid flags"),
+                p_app,
+                x_func,
+                x_step,
+                x_final,
+                destroy,
+            )
+        }
     }
 }
 

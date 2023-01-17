@@ -11,3 +11,6 @@ crate-type = ["rlib"]
 
 [build-dependencies]
 bindgen = "0.63.0"
+
+[features]
+omit_load_extension = []

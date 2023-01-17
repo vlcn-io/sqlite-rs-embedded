@@ -9,3 +9,6 @@ crate-type = ["rlib"]
 
 [dependencies]
 sqlite_nostd = { path="../sqlite_nostd"}
+
+[features]
+omit_load_extension = ["sqlite3_nostd/omit_load_extension"]
