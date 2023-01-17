@@ -10,45 +10,24 @@ use crate::bindings;
 pub use crate::bindings::{
     sqlite3, sqlite3_api_routines as api_routines, sqlite3_context as context,
     sqlite3_index_info as index_info, sqlite3_module as module, sqlite3_stmt as stmt,
-    sqlite3_uint64 as uint64, sqlite3_value as value, sqlite_int64 as int64, SQLITE_ABORT as ABORT,
-    SQLITE_ALTER_TABLE as ALTER_TABLE, SQLITE_ANALYZE as ANALYZE, SQLITE_ATTACH as ATTACH,
-    SQLITE_AUTH as AUTH, SQLITE_BLOB as BLOB, SQLITE_BUSY as BUSY, SQLITE_CANTOPEN as CANTOPEN,
-    SQLITE_CONSTRAINT as CONSTRAINT, SQLITE_COPY as COPY, SQLITE_CORRUPT as CORRUPT,
-    SQLITE_CREATE_INDEX as CREATE_INDEX, SQLITE_CREATE_TABLE as CREATE_TABLE,
-    SQLITE_CREATE_TEMP_INDEX as CREATE_TEMP_INDEX, SQLITE_CREATE_TEMP_TABLE as CREATE_TEMP_TABLE,
-    SQLITE_CREATE_TEMP_TRIGGER as CREATE_TEMP_TRIGGER, SQLITE_CREATE_TEMP_VIEW as CREATE_TEMP_VIEW,
-    SQLITE_CREATE_TRIGGER as CREATE_TRIGGER, SQLITE_CREATE_VIEW as CREATE_VIEW,
-    SQLITE_CREATE_VTABLE as CREATE_VTABLE, SQLITE_DELETE as DELETE, SQLITE_DENY as DENY,
-    SQLITE_DETACH as DETACH, SQLITE_DONE as DONE, SQLITE_DROP_INDEX as DROP_INDEX,
-    SQLITE_DROP_TABLE as DROP_TABLE, SQLITE_DROP_TEMP_INDEX as DROP_TEMP_INDEX,
-    SQLITE_DROP_TEMP_TABLE as DROP_TEMP_TABLE, SQLITE_DROP_TEMP_TRIGGER as DROP_TEMP_TRIGGER,
-    SQLITE_DROP_TEMP_VIEW as DROP_TEMP_VIEW, SQLITE_DROP_TRIGGER as DROP_TRIGGER,
-    SQLITE_DROP_VIEW as DROP_VIEW, SQLITE_DROP_VTABLE as DROP_VTABLE, SQLITE_EMPTY as EMPTY,
-    SQLITE_FLOAT as FLOAT, SQLITE_FORMAT as FORMAT, SQLITE_FULL as FULL,
-    SQLITE_FUNCTION as FUNCTION, SQLITE_IGNORE as IGNORE, SQLITE_INNOCUOUS as INNOCUOUS,
-    SQLITE_INSERT as INSERT, SQLITE_INTEGER as INTEGER, SQLITE_INTERRUPT as INTERRUPT,
-    SQLITE_IOERR as IOERR, SQLITE_LIMIT_ATTACHED as LIMIT_ATTACHED,
-    SQLITE_LIMIT_COLUMN as LIMIT_COLUMN, SQLITE_LIMIT_COMPOUND_SELECT as LIMIT_COMPOUND_SELECT,
-    SQLITE_LIMIT_EXPR_DEPTH as LIMIT_EXPR_DEPTH, SQLITE_LIMIT_FUNCTION_ARG as LIMIT_FUNCTION_ARG,
-    SQLITE_LIMIT_LENGTH as LIMIT_LENGTH,
-    SQLITE_LIMIT_LIKE_PATTERN_LENGTH as LIMIT_LIKE_PATTERN_LENGTH,
-    SQLITE_LIMIT_SQL_LENGTH as LIMIT_SQL_LENGTH, SQLITE_LIMIT_TRIGGER_DEPTH as LIMIT_TRIGGER_DEPTH,
-    SQLITE_LIMIT_VARIABLE_NUMBER as LIMIT_VARIABLE_NUMBER, SQLITE_LIMIT_VDBE_OP as LIMIT_VDBE_OP,
-    SQLITE_LIMIT_WORKER_THREADS as LIMIT_WORKER_THREADS, SQLITE_LOCKED as LOCKED,
-    SQLITE_MISMATCH as MISMATCH, SQLITE_MISUSE as MISUSE, SQLITE_NOLFS as NOLFS,
-    SQLITE_NOMEM as NOMEM, SQLITE_NOTADB as NOTADB, SQLITE_NOTFOUND as NOTFOUND,
-    SQLITE_NOTICE as NOTICE, SQLITE_NULL as NULL, SQLITE_OK as OK,
-    SQLITE_OPEN_AUTOPROXY as OPEN_AUTOPROXY, SQLITE_OPEN_CREATE as OPEN_CREATE,
-    SQLITE_OPEN_DELETEONCLOSE as OPEN_DELETEONCLOSE, SQLITE_OPEN_EXCLUSIVE as OPEN_EXCLUSIVE,
-    SQLITE_OPEN_MAIN_DB as OPEN_MAIN_DB, SQLITE_OPEN_MEMORY as OPEN_MEMORY,
-    SQLITE_OPEN_READONLY as OPEN_READONLY, SQLITE_OPEN_READWRITE as OPEN_READWRITE,
-    SQLITE_OPEN_URI as OPEN_URI, SQLITE_PRAGMA as PRAGMA, SQLITE_PROTOCOL as PROTOCOL,
-    SQLITE_RANGE as RANGE, SQLITE_READ as READ, SQLITE_READONLY as READONLY,
-    SQLITE_RECURSIVE as RECURSIVE, SQLITE_REINDEX as REINDEX, SQLITE_ROW as ROW,
-    SQLITE_SAVEPOINT as SAVEPOINT, SQLITE_SCHEMA as SCHEMA, SQLITE_SELECT as SELECT,
-    SQLITE_TEXT as TEXT, SQLITE_TOOBIG as TOOBIG, SQLITE_TRANSACTION as TRANSACTION,
-    SQLITE_UPDATE as UPDATE, SQLITE_UTF8 as UTF8, SQLITE_WARNING as WARNING,
+    sqlite3_uint64 as uint64, sqlite3_value as value, sqlite_int64 as int64, SQLITE_UTF8 as UTF8,
 };
+
+mod aliased {
+    pub use crate::bindings::{
+        sqlite3_close as close, sqlite3_commit_hook as commit_hook,
+        sqlite3_create_function_v2 as create_function_v2,
+        sqlite3_create_module_v2 as create_module_v2, sqlite3_declare_vtab as declare_vtab,
+        sqlite3_free as free, sqlite3_get_auxdata as get_auxdata, sqlite3_malloc as malloc,
+        sqlite3_malloc64 as malloc64, sqlite3_result_blob as result_blob,
+        sqlite3_result_error as result_error, sqlite3_result_error_code as result_error_code,
+        sqlite3_result_int as result_int, sqlite3_result_int64 as result_int64,
+        sqlite3_result_null as result_null, sqlite3_result_pointer as result_pointer,
+        sqlite3_result_subtype as result_subtype, sqlite3_result_text as result_text,
+        sqlite3_set_auxdata as set_auxdata, sqlite3_value_text as value_text,
+        sqlite3_value_type as value_type, sqlite3_vtab_distinct as vtab_distinct,
+    };
+}
 
 pub enum Destructor {
     TRANSIENT,
@@ -61,6 +40,20 @@ macro_rules! strlit {
     ($s:expr) => {
         concat!($s, "\0").as_ptr() as *const c_char
     };
+}
+
+#[cfg(feature = "omit_load_extension")]
+macro_rules! invoke_sqlite {
+    ($name:ident, $($arg:expr),*) => {
+      aliased::$name($($arg),*)
+    };
+}
+
+#[cfg(not(feature = "omit_load_extension"))]
+macro_rules! invoke_sqlite {
+  ($name:ident, $($arg:expr),*) => {
+    ((*SQLITE3_API).$name.unwrap())($($arg),*)
+  }
 }
 
 pub extern "C" fn droprust(ptr: *mut c_void) {
@@ -90,42 +83,15 @@ static EXPECT_MESSAGE: &str =
 pub fn malloc(size: usize) -> *mut u8 {
     unsafe {
         if usize::BITS == 64 {
-            #[cfg(feature = "omit_load_extension")]
-            {
-                let ptr = bindings::sqlite3_malloc64(size as uint64);
-                ptr as *mut u8
-            }
-            #[cfg(not(feature = "omit_load_extension"))]
-            {
-                let ptr = ((*SQLITE3_API).malloc64.expect(EXPECT_MESSAGE))(size as uint64);
-                ptr as *mut u8
-            }
+            invoke_sqlite!(malloc64, size as uint64) as *mut u8
         } else {
-            #[cfg(feature = "omit_load_extension")]
-            {
-                let ptr = bindings::sqlite3_malloc(size as i32);
-                ptr as *mut u8
-            }
-            #[cfg(not(feature = "omit_load_extension"))]
-            {
-                let ptr = ((*SQLITE3_API).malloc.expect(EXPECT_MESSAGE))(size as i32);
-                ptr as *mut u8
-            }
+            invoke_sqlite!(malloc, size as i32) as *mut u8
         }
     }
 }
 
 pub fn free(ptr: *mut u8) {
-    unsafe {
-        #[cfg(feature = "omit_load_extension")]
-        {
-            bindings::sqlite3_free(ptr as *mut c_void);
-        }
-        #[cfg(not(feature = "omit_load_extension"))]
-        {
-            ((*SQLITE3_API).free.expect(EXPECT_MESSAGE))(ptr as *mut c_void);
-        }
-    }
+    unsafe { invoke_sqlite!(free, ptr as *mut c_void) }
 }
 
 pub type xCommitHook = unsafe extern "C" fn(*mut c_void) -> i32;
@@ -135,8 +101,9 @@ pub fn commit_hook(
     user_data: *mut c_void,
 ) -> Option<xCommitHook> {
     unsafe {
-        let ptr = ((*SQLITE3_API).commit_hook.expect(EXPECT_MESSAGE))(db, callback, user_data);
-        ptr.as_ref().map(|p| core::mem::transmute(p))
+        invoke_sqlite!(commit_hook, db, callback, user_data)
+            .as_ref()
+            .map(|p| core::mem::transmute(p))
     }
 }
 
@@ -147,7 +114,7 @@ pub fn commit_hook(
 pub fn value_text<'a>(arg1: *mut value) -> &'a str {
     unsafe {
         let len = value_bytes(arg1);
-        let bytes = ((*SQLITE3_API).value_text.expect(EXPECT_MESSAGE))(arg1);
+        let bytes = invoke_sqlite!(value_text, arg1);
         let slice = core::slice::from_raw_parts(bytes as *const u8, len as usize);
         core::str::from_utf8_unchecked(slice)
     }
@@ -284,9 +251,7 @@ pub fn result_double(context: *mut context, f: f64) {
 }
 
 pub fn result_null(context: *mut context) {
-    unsafe {
-        ((*SQLITE3_API).result_null.expect(EXPECT_MESSAGE))(context);
-    }
+    unsafe { invoke_sqlite!(result_null, context) }
 }
 pub fn result_pointer(
     context: *mut context,
@@ -294,32 +259,27 @@ pub fn result_pointer(
     name: *mut c_char,
     destructor: Option<unsafe extern "C" fn(*mut c_void)>,
 ) {
-    unsafe {
-        ((*SQLITE3_API).result_pointer.expect(EXPECT_MESSAGE))(context, pointer, name, destructor);
-    }
+    unsafe { invoke_sqlite!(result_pointer, context, pointer, name, destructor) }
 }
 
 pub fn result_error(context: *mut context, text: &str) -> Result<(), NulError> {
     CString::new(text.as_bytes()).map(|s| {
         let n = text.len() as i32;
         let ptr = s.as_ptr();
-        unsafe {
-            ((*SQLITE3_API).result_error.expect(EXPECT_MESSAGE))(context, ptr, n);
-        }
+        unsafe { invoke_sqlite!(result_error, context, ptr, n) }
     })
 }
 
 pub fn result_error_code(context: *mut context, code: i32) {
-    unsafe {
-        ((*SQLITE3_API).result_error_code.expect(EXPECT_MESSAGE))(context, code);
-    }
+    unsafe { invoke_sqlite!(result_error_code, context, code) }
 }
 
 // d is our destructor function.
 // -- https://dev.to/kgrech/7-ways-to-pass-a-string-between-rust-and-c-4ieb
 pub fn result_text(context: *mut context, s: *const i8, n: i32, d: Destructor) {
     unsafe {
-        ((*SQLITE3_API).result_text.expect(EXPECT_MESSAGE))(
+        invoke_sqlite!(
+            result_text,
             context,
             s,
             n,
@@ -327,15 +287,13 @@ pub fn result_text(context: *mut context, s: *const i8, n: i32, d: Destructor) {
                 Destructor::TRANSIENT => Some(core::mem::transmute(-1_isize)),
                 Destructor::STATIC => None,
                 Destructor::CUSTOM(f) => Some(f),
-            },
-        );
+            }
+        )
     }
 }
 
 pub fn result_subtype(context: *mut context, subtype: u32) {
-    unsafe {
-        ((*SQLITE3_API).result_subtype.expect(EXPECT_MESSAGE))(context, subtype);
-    }
+    unsafe { invoke_sqlite!(result_subtype, context, subtype) }
 }
 
 pub fn set_auxdata(
@@ -344,13 +302,11 @@ pub fn set_auxdata(
     p: *mut c_void,
     d: Option<unsafe extern "C" fn(*mut c_void)>,
 ) {
-    unsafe {
-        ((*SQLITE3_API).set_auxdata.expect(EXPECT_MESSAGE))(context, n, p, d);
-    }
+    unsafe { invoke_sqlite!(set_auxdata, context, n, p, d) }
 }
 
 pub fn get_auxdata(context: *mut context, n: c_int) -> *mut c_void {
-    unsafe { ((*SQLITE3_API).get_auxdata.expect(EXPECT_MESSAGE))(context, n) }
+    unsafe { invoke_sqlite!(get_auxdata, context, n) }
 }
 
 pub type xFunc = unsafe extern "C" fn(*mut context, i32, *mut *mut value);
@@ -369,34 +325,18 @@ pub fn create_function_v2(
     destroy: Option<xDestroy>,
 ) -> c_int {
     unsafe {
-        #[cfg(feature = "omit_load_extension")]
-        {
-            bindings::sqlite3_create_function_v2(
-                db,
-                s,
-                argc,
-                i32::try_from(flags).expect("Invalid flags"),
-                p_app,
-                x_func,
-                x_step,
-                x_final,
-                destroy,
-            )
-        }
-        #[cfg(not(feature = "omit_load_extension"))]
-        {
-            ((*SQLITE3_API).create_function_v2.expect(EXPECT_MESSAGE))(
-                db,
-                s,
-                argc,
-                i32::try_from(flags).expect("Invalid flags"),
-                p_app,
-                x_func,
-                x_step,
-                x_final,
-                destroy,
-            )
-        }
+        invoke_sqlite!(
+            create_function_v2,
+            db,
+            s,
+            argc,
+            i32::try_from(flags).expect("Invalid flags"),
+            p_app,
+            x_func,
+            x_step,
+            x_final,
+            destroy
+        )
     }
 }
 
@@ -407,19 +347,17 @@ pub fn create_module_v2(
     p_app: *mut c_void,
     destroy: Option<unsafe extern "C" fn(*mut c_void)>,
 ) -> i32 {
-    unsafe {
-        ((*SQLITE3_API).create_module_v2.expect(EXPECT_MESSAGE))(db, s, module, p_app, destroy)
-    }
+    unsafe { invoke_sqlite!(create_module_v2, db, s, module, p_app, destroy) }
 }
 
 pub fn vtab_distinct(index_info: *mut index_info) -> i32 {
-    unsafe { ((*SQLITE3_API).vtab_distinct.expect(EXPECT_MESSAGE))(index_info) }
+    unsafe { invoke_sqlite!(vtab_distinct, index_info) }
 }
 
-pub fn sqlitex_declare_vtab(db: *mut sqlite3, s: *const i8) -> i32 {
-    unsafe { ((*SQLITE3_API).declare_vtab.expect(EXPECT_MESSAGE))(db, s) }
+pub fn declare_vtab(db: *mut sqlite3, s: *const i8) -> i32 {
+    unsafe { invoke_sqlite!(declare_vtab, db, s) }
 }
 
 pub fn close(db: *mut sqlite3) -> i32 {
-    unsafe { ((*SQLITE3_API).close.expect(EXPECT_MESSAGE))(db) }
+    unsafe { invoke_sqlite!(close, db) }
 }
