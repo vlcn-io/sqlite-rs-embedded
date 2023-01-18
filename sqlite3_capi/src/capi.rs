@@ -4,9 +4,6 @@ use alloc::ffi::{CString, NulError};
 use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
-#[cfg(feature = "omit_load_extension")]
-use crate::bindings;
-
 pub use crate::bindings::{
     sqlite3, sqlite3_api_routines as api_routines, sqlite3_context as context,
     sqlite3_index_info as index_info, sqlite3_module as module, sqlite3_stmt as stmt,
@@ -15,17 +12,38 @@ pub use crate::bindings::{
 
 mod aliased {
     pub use crate::bindings::{
-        sqlite3_close as close, sqlite3_commit_hook as commit_hook,
-        sqlite3_create_function_v2 as create_function_v2,
+        sqlite3_bind_blob as bind_blob, sqlite3_bind_double as bind_double,
+        sqlite3_bind_int as bind_int, sqlite3_bind_int64 as bind_int64,
+        sqlite3_bind_null as bind_null, sqlite3_bind_parameter_count as bind_parameter_count,
+        sqlite3_bind_parameter_index as bind_parameter_index,
+        sqlite3_bind_parameter_name as bind_parameter_name, sqlite3_bind_pointer as bind_pointer,
+        sqlite3_bind_text as bind_text, sqlite3_bind_value as bind_value,
+        sqlite3_bind_zeroblob as bind_zeroblob, sqlite3_close as close,
+        sqlite3_column_blob as column_blob, sqlite3_column_bytes as column_bytes,
+        sqlite3_column_count as column_count, sqlite3_column_decltype as column_decltype,
+        sqlite3_column_double as column_double, sqlite3_column_int as column_int,
+        sqlite3_column_int64 as column_int64, sqlite3_column_name as column_name,
+        sqlite3_column_origin_name as column_origin_name,
+        sqlite3_column_table_name as column_table_name, sqlite3_column_text as column_text,
+        sqlite3_column_type as column_type, sqlite3_column_value as column_value,
+        sqlite3_commit_hook as commit_hook, sqlite3_create_function_v2 as create_function_v2,
         sqlite3_create_module_v2 as create_module_v2, sqlite3_declare_vtab as declare_vtab,
-        sqlite3_free as free, sqlite3_get_auxdata as get_auxdata, sqlite3_malloc as malloc,
-        sqlite3_malloc64 as malloc64, sqlite3_result_blob as result_blob,
-        sqlite3_result_error as result_error, sqlite3_result_error_code as result_error_code,
-        sqlite3_result_int as result_int, sqlite3_result_int64 as result_int64,
-        sqlite3_result_null as result_null, sqlite3_result_pointer as result_pointer,
-        sqlite3_result_subtype as result_subtype, sqlite3_result_text as result_text,
-        sqlite3_set_auxdata as set_auxdata, sqlite3_value_text as value_text,
-        sqlite3_value_type as value_type, sqlite3_vtab_distinct as vtab_distinct,
+        sqlite3_finalize as finalize, sqlite3_free as free, sqlite3_get_auxdata as get_auxdata,
+        sqlite3_malloc as malloc, sqlite3_malloc64 as malloc64, sqlite3_prepare_v2 as prepare_v2,
+        sqlite3_reset as reset, sqlite3_result_blob as result_blob,
+        sqlite3_result_double as result_double, sqlite3_result_error as result_error,
+        sqlite3_result_error_code as result_error_code, sqlite3_result_int as result_int,
+        sqlite3_result_int64 as result_int64, sqlite3_result_null as result_null,
+        sqlite3_result_pointer as result_pointer, sqlite3_result_subtype as result_subtype,
+        sqlite3_result_text as result_text, sqlite3_result_value as result_value,
+        sqlite3_set_auxdata as set_auxdata, sqlite3_step as step, sqlite3_value_blob as value_blob,
+        sqlite3_value_bytes as value_bytes, sqlite3_value_double as value_double,
+        sqlite3_value_int as value_int, sqlite3_value_int64 as value_int64,
+        sqlite3_value_pointer as value_pointer, sqlite3_value_subtype as value_subtype,
+        sqlite3_value_text as value_text, sqlite3_value_type as value_type,
+        sqlite3_vtab_collation as vtab_collation, sqlite3_vtab_config as vtab_config,
+        sqlite3_vtab_distinct as vtab_distinct, sqlite3_vtab_nochange as vtab_nochange,
+        sqlite3_vtab_on_conflict as vtab_on_conflict,
     };
 }
 
@@ -77,9 +95,6 @@ pub fn EXTENSION_INIT2(api: *mut api_routines) {
     }
 }
 
-static EXPECT_MESSAGE: &str =
-    "sqlite-loadable error: expected method on SQLITE3_API. Please file an issue";
-
 pub fn malloc(size: usize) -> *mut u8 {
     unsafe {
         if usize::BITS == 64 {
@@ -121,74 +136,74 @@ pub fn value_text<'a>(arg1: *mut value) -> &'a str {
 }
 
 pub fn value_type(value: *mut value) -> i32 {
-    unsafe { ((*SQLITE3_API).value_type.expect(EXPECT_MESSAGE))(value) }
+    unsafe { invoke_sqlite!(value_type, value) }
 }
 
 pub fn value_bytes(arg1: *mut value) -> i32 {
-    unsafe { ((*SQLITE3_API).value_bytes.expect(EXPECT_MESSAGE))(arg1) }
+    unsafe { invoke_sqlite!(value_bytes, arg1) }
 }
 
 pub fn value_blob<'a>(value: *mut value) -> &'a [u8] {
     unsafe {
         let n = value_bytes(value);
-        let b = ((*SQLITE3_API).value_blob.expect(EXPECT_MESSAGE))(value);
+        let b = invoke_sqlite!(value_blob, value);
         core::slice::from_raw_parts(b.cast::<u8>(), n as usize)
     }
 }
 
 pub fn bind_pointer(db: *mut stmt, i: i32, p: *mut c_void, t: *const c_char) -> i32 {
-    unsafe { ((*SQLITE3_API).bind_pointer.expect(EXPECT_MESSAGE))(db, i, p, t, None) }
+    unsafe { invoke_sqlite!(bind_pointer, db, i, p, t, None) }
 }
 pub fn step(stmt: *mut stmt) -> c_int {
-    unsafe { ((*SQLITE3_API).step.expect(EXPECT_MESSAGE))(stmt) }
+    unsafe { invoke_sqlite!(step, stmt) }
 }
 
 pub fn finalize(stmt: *mut stmt) -> c_int {
-    unsafe { ((*SQLITE3_API).finalize.expect(EXPECT_MESSAGE))(stmt) }
+    unsafe { invoke_sqlite!(finalize, stmt) }
 }
 
 pub fn column_type(stmt: *mut stmt, c: c_int) -> i32 {
-    unsafe { ((*SQLITE3_API).column_type.expect(EXPECT_MESSAGE))(stmt, c) }
+    unsafe { invoke_sqlite!(column_type, stmt, c) }
 }
 
 pub fn column_count(stmt: *mut stmt) -> i32 {
-    unsafe { ((*SQLITE3_API).column_count.expect(EXPECT_MESSAGE))(stmt) }
+    unsafe { invoke_sqlite!(column_count, stmt) }
 }
 
 pub fn column_text(stmt: *mut stmt, c: c_int) -> *const c_uchar {
-    unsafe { ((*SQLITE3_API).column_text.expect(EXPECT_MESSAGE))(stmt, c) }
+    unsafe { invoke_sqlite!(column_text, stmt, c) }
 }
 
 pub fn column_blob(stmt: *mut stmt, c: c_int) -> *const c_void {
-    unsafe { ((*SQLITE3_API).column_blob.expect(EXPECT_MESSAGE))(stmt, c) }
+    unsafe { invoke_sqlite!(column_blob, stmt, c) }
 }
 
 pub fn column_bytes(stmt: *mut stmt, c: c_int) -> i32 {
-    unsafe { ((*SQLITE3_API).column_bytes.expect(EXPECT_MESSAGE))(stmt, c) }
+    unsafe { invoke_sqlite!(column_bytes, stmt, c) }
 }
 
 pub fn column_value(stmt: *mut stmt, c: c_int) -> *mut value {
-    unsafe { ((*SQLITE3_API).column_value.expect(EXPECT_MESSAGE))(stmt, c) }
+    unsafe { invoke_sqlite!(column_value, stmt, c) }
 }
 
 pub fn column_double(stmt: *mut stmt, c: c_int) -> f64 {
-    unsafe { ((*SQLITE3_API).column_double.expect(EXPECT_MESSAGE))(stmt, c) }
+    unsafe { invoke_sqlite!(column_double, stmt, c) }
 }
 
 pub fn column_int(stmt: *mut stmt, c: c_int) -> i32 {
-    unsafe { ((*SQLITE3_API).column_int.expect(EXPECT_MESSAGE))(stmt, c) }
+    unsafe { invoke_sqlite!(column_int, stmt, c) }
 }
 
 pub fn column_int64(stmt: *mut stmt, c: c_int) -> int64 {
-    unsafe { ((*SQLITE3_API).column_int64.expect(EXPECT_MESSAGE))(stmt, c) }
+    unsafe { invoke_sqlite!(column_int64, stmt, c) }
 }
 
 pub fn column_name(stmt: *mut stmt, c: c_int) -> *const c_char {
-    unsafe { ((*SQLITE3_API).column_name.expect(EXPECT_MESSAGE))(stmt, c) }
+    unsafe { invoke_sqlite!(column_name, stmt, c) }
 }
 
 pub fn bind_text(stmt: *mut stmt, c: c_int, s: *const c_char, n: c_int) -> i32 {
-    unsafe { ((*SQLITE3_API).bind_text.expect(EXPECT_MESSAGE))(stmt, c, s, n, None) }
+    unsafe { invoke_sqlite!(bind_text, stmt, c, s, n, None) }
 }
 
 pub fn prepare_v2(
@@ -198,34 +213,33 @@ pub fn prepare_v2(
     stmt: *mut *mut stmt,
     leftover: *mut *const c_char,
 ) -> i32 {
-    unsafe { ((*SQLITE3_API).prepare_v2.expect(EXPECT_MESSAGE))(db, sql, n, stmt, leftover) }
+    unsafe { invoke_sqlite!(prepare_v2, db, sql, n, stmt, leftover) }
 }
 
 pub fn value_int(arg1: *mut value) -> i32 {
-    unsafe { ((*SQLITE3_API).value_int.expect(EXPECT_MESSAGE))(arg1) }
+    unsafe { invoke_sqlite!(value_int, arg1) }
 }
 
 pub fn value_int64(arg1: *mut value) -> int64 {
-    unsafe { ((*SQLITE3_API).value_int64.expect(EXPECT_MESSAGE))(arg1) }
+    unsafe { invoke_sqlite!(value_int64, arg1) }
 }
 
 pub fn value_double(arg1: *mut value) -> f64 {
-    unsafe { ((*SQLITE3_API).value_double.expect(EXPECT_MESSAGE))(arg1) }
+    unsafe { invoke_sqlite!(value_double, arg1) }
 }
 
 pub fn value_pointer(arg1: *mut value, p: *mut c_char) -> *mut c_void {
-    unsafe { ((*SQLITE3_API).value_pointer.expect(EXPECT_MESSAGE))(arg1, p) }
+    unsafe { invoke_sqlite!(value_pointer, arg1, p) }
 }
 
 pub fn result_int(context: *mut context, v: c_int) {
-    unsafe {
-        ((*SQLITE3_API).result_int.expect(EXPECT_MESSAGE))(context, v);
-    }
+    unsafe { invoke_sqlite!(result_int, context, v) }
 }
 
 pub fn result_blob(context: *mut context, b: *const u8, n: i32, d: Destructor) {
     unsafe {
-        ((*SQLITE3_API).result_blob.expect(EXPECT_MESSAGE))(
+        invoke_sqlite!(
+            result_blob,
             context,
             b as *const c_void,
             n,
@@ -233,21 +247,17 @@ pub fn result_blob(context: *mut context, b: *const u8, n: i32, d: Destructor) {
                 Destructor::TRANSIENT => Some(core::mem::transmute(-1_isize)),
                 Destructor::STATIC => None,
                 Destructor::CUSTOM(f) => Some(f),
-            },
-        );
+            }
+        )
     }
 }
 
 pub fn result_int64(context: *mut context, v: int64) {
-    unsafe {
-        ((*SQLITE3_API).result_int64.expect(EXPECT_MESSAGE))(context, v);
-    }
+    unsafe { invoke_sqlite!(result_int64, context, v) }
 }
 
 pub fn result_double(context: *mut context, f: f64) {
-    unsafe {
-        ((*SQLITE3_API).result_double.expect(EXPECT_MESSAGE))(context, f);
-    }
+    unsafe { invoke_sqlite!(result_double, context, f) }
 }
 
 pub fn result_null(context: *mut context) {
