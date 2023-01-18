@@ -29,21 +29,21 @@ mod aliased {
         sqlite3_commit_hook as commit_hook, sqlite3_create_function_v2 as create_function_v2,
         sqlite3_create_module_v2 as create_module_v2, sqlite3_declare_vtab as declare_vtab,
         sqlite3_finalize as finalize, sqlite3_free as free, sqlite3_get_auxdata as get_auxdata,
-        sqlite3_malloc as malloc, sqlite3_malloc64 as malloc64, sqlite3_prepare_v2 as prepare_v2,
-        sqlite3_reset as reset, sqlite3_result_blob as result_blob,
-        sqlite3_result_double as result_double, sqlite3_result_error as result_error,
-        sqlite3_result_error_code as result_error_code, sqlite3_result_int as result_int,
-        sqlite3_result_int64 as result_int64, sqlite3_result_null as result_null,
-        sqlite3_result_pointer as result_pointer, sqlite3_result_subtype as result_subtype,
-        sqlite3_result_text as result_text, sqlite3_result_value as result_value,
-        sqlite3_set_auxdata as set_auxdata, sqlite3_step as step, sqlite3_value_blob as value_blob,
-        sqlite3_value_bytes as value_bytes, sqlite3_value_double as value_double,
-        sqlite3_value_int as value_int, sqlite3_value_int64 as value_int64,
-        sqlite3_value_pointer as value_pointer, sqlite3_value_subtype as value_subtype,
-        sqlite3_value_text as value_text, sqlite3_value_type as value_type,
-        sqlite3_vtab_collation as vtab_collation, sqlite3_vtab_config as vtab_config,
-        sqlite3_vtab_distinct as vtab_distinct, sqlite3_vtab_nochange as vtab_nochange,
-        sqlite3_vtab_on_conflict as vtab_on_conflict,
+        sqlite3_malloc as malloc, sqlite3_malloc64 as malloc64, sqlite3_open as open,
+        sqlite3_prepare_v2 as prepare_v2, sqlite3_reset as reset,
+        sqlite3_result_blob as result_blob, sqlite3_result_double as result_double,
+        sqlite3_result_error as result_error, sqlite3_result_error_code as result_error_code,
+        sqlite3_result_int as result_int, sqlite3_result_int64 as result_int64,
+        sqlite3_result_null as result_null, sqlite3_result_pointer as result_pointer,
+        sqlite3_result_subtype as result_subtype, sqlite3_result_text as result_text,
+        sqlite3_result_value as result_value, sqlite3_set_auxdata as set_auxdata,
+        sqlite3_step as step, sqlite3_value_blob as value_blob, sqlite3_value_bytes as value_bytes,
+        sqlite3_value_double as value_double, sqlite3_value_int as value_int,
+        sqlite3_value_int64 as value_int64, sqlite3_value_pointer as value_pointer,
+        sqlite3_value_subtype as value_subtype, sqlite3_value_text as value_text,
+        sqlite3_value_type as value_type, sqlite3_vtab_collation as vtab_collation,
+        sqlite3_vtab_config as vtab_config, sqlite3_vtab_distinct as vtab_distinct,
+        sqlite3_vtab_nochange as vtab_nochange, sqlite3_vtab_on_conflict as vtab_on_conflict,
     };
 }
 
@@ -95,18 +95,16 @@ pub fn EXTENSION_INIT2(api: *mut api_routines) {
     }
 }
 
-pub fn malloc(size: usize) -> *mut u8 {
-    unsafe {
-        if usize::BITS == 64 {
-            invoke_sqlite!(malloc64, size as uint64) as *mut u8
-        } else {
-            invoke_sqlite!(malloc, size as i32) as *mut u8
-        }
-    }
+pub fn bind_text(stmt: *mut stmt, c: c_int, s: *const c_char, n: c_int) -> i32 {
+    unsafe { invoke_sqlite!(bind_text, stmt, c, s, n, None) }
 }
 
-pub fn free(ptr: *mut u8) {
-    unsafe { invoke_sqlite!(free, ptr as *mut c_void) }
+pub fn bind_pointer(db: *mut stmt, i: i32, p: *mut c_void, t: *const c_char) -> i32 {
+    unsafe { invoke_sqlite!(bind_pointer, db, i, p, t, None) }
+}
+
+pub fn close(db: *mut sqlite3) -> i32 {
+    unsafe { invoke_sqlite!(close, db) }
 }
 
 pub type xCommitHook = unsafe extern "C" fn(*mut c_void) -> i32;
@@ -125,42 +123,6 @@ pub fn commit_hook(
 // pub fn mprintf(format: *const i8, ...) -> *mut c_char {
 //     unsafe { ((*SQLITE3_API).mprintf.expect(EXPECT_MESSAGE))(format, args) }
 // }
-
-pub fn value_text<'a>(arg1: *mut value) -> &'a str {
-    unsafe {
-        let len = value_bytes(arg1);
-        let bytes = invoke_sqlite!(value_text, arg1);
-        let slice = core::slice::from_raw_parts(bytes as *const u8, len as usize);
-        core::str::from_utf8_unchecked(slice)
-    }
-}
-
-pub fn value_type(value: *mut value) -> i32 {
-    unsafe { invoke_sqlite!(value_type, value) }
-}
-
-pub fn value_bytes(arg1: *mut value) -> i32 {
-    unsafe { invoke_sqlite!(value_bytes, arg1) }
-}
-
-pub fn value_blob<'a>(value: *mut value) -> &'a [u8] {
-    unsafe {
-        let n = value_bytes(value);
-        let b = invoke_sqlite!(value_blob, value);
-        core::slice::from_raw_parts(b.cast::<u8>(), n as usize)
-    }
-}
-
-pub fn bind_pointer(db: *mut stmt, i: i32, p: *mut c_void, t: *const c_char) -> i32 {
-    unsafe { invoke_sqlite!(bind_pointer, db, i, p, t, None) }
-}
-pub fn step(stmt: *mut stmt) -> c_int {
-    unsafe { invoke_sqlite!(step, stmt) }
-}
-
-pub fn finalize(stmt: *mut stmt) -> c_int {
-    unsafe { invoke_sqlite!(finalize, stmt) }
-}
 
 pub fn column_type(stmt: *mut stmt, c: c_int) -> i32 {
     unsafe { invoke_sqlite!(column_type, stmt, c) }
@@ -200,123 +162,6 @@ pub fn column_int64(stmt: *mut stmt, c: c_int) -> int64 {
 
 pub fn column_name(stmt: *mut stmt, c: c_int) -> *const c_char {
     unsafe { invoke_sqlite!(column_name, stmt, c) }
-}
-
-pub fn bind_text(stmt: *mut stmt, c: c_int, s: *const c_char, n: c_int) -> i32 {
-    unsafe { invoke_sqlite!(bind_text, stmt, c, s, n, None) }
-}
-
-pub fn prepare_v2(
-    db: *mut sqlite3,
-    sql: *const c_char,
-    n: i32,
-    stmt: *mut *mut stmt,
-    leftover: *mut *const c_char,
-) -> i32 {
-    unsafe { invoke_sqlite!(prepare_v2, db, sql, n, stmt, leftover) }
-}
-
-pub fn value_int(arg1: *mut value) -> i32 {
-    unsafe { invoke_sqlite!(value_int, arg1) }
-}
-
-pub fn value_int64(arg1: *mut value) -> int64 {
-    unsafe { invoke_sqlite!(value_int64, arg1) }
-}
-
-pub fn value_double(arg1: *mut value) -> f64 {
-    unsafe { invoke_sqlite!(value_double, arg1) }
-}
-
-pub fn value_pointer(arg1: *mut value, p: *mut c_char) -> *mut c_void {
-    unsafe { invoke_sqlite!(value_pointer, arg1, p) }
-}
-
-pub fn result_int(context: *mut context, v: c_int) {
-    unsafe { invoke_sqlite!(result_int, context, v) }
-}
-
-pub fn result_blob(context: *mut context, b: *const u8, n: i32, d: Destructor) {
-    unsafe {
-        invoke_sqlite!(
-            result_blob,
-            context,
-            b as *const c_void,
-            n,
-            match d {
-                Destructor::TRANSIENT => Some(core::mem::transmute(-1_isize)),
-                Destructor::STATIC => None,
-                Destructor::CUSTOM(f) => Some(f),
-            }
-        )
-    }
-}
-
-pub fn result_int64(context: *mut context, v: int64) {
-    unsafe { invoke_sqlite!(result_int64, context, v) }
-}
-
-pub fn result_double(context: *mut context, f: f64) {
-    unsafe { invoke_sqlite!(result_double, context, f) }
-}
-
-pub fn result_null(context: *mut context) {
-    unsafe { invoke_sqlite!(result_null, context) }
-}
-pub fn result_pointer(
-    context: *mut context,
-    pointer: *mut c_void,
-    name: *mut c_char,
-    destructor: Option<unsafe extern "C" fn(*mut c_void)>,
-) {
-    unsafe { invoke_sqlite!(result_pointer, context, pointer, name, destructor) }
-}
-
-pub fn result_error(context: *mut context, text: &str) -> Result<(), NulError> {
-    CString::new(text.as_bytes()).map(|s| {
-        let n = text.len() as i32;
-        let ptr = s.as_ptr();
-        unsafe { invoke_sqlite!(result_error, context, ptr, n) }
-    })
-}
-
-pub fn result_error_code(context: *mut context, code: i32) {
-    unsafe { invoke_sqlite!(result_error_code, context, code) }
-}
-
-// d is our destructor function.
-// -- https://dev.to/kgrech/7-ways-to-pass-a-string-between-rust-and-c-4ieb
-pub fn result_text(context: *mut context, s: *const i8, n: i32, d: Destructor) {
-    unsafe {
-        invoke_sqlite!(
-            result_text,
-            context,
-            s,
-            n,
-            match d {
-                Destructor::TRANSIENT => Some(core::mem::transmute(-1_isize)),
-                Destructor::STATIC => None,
-                Destructor::CUSTOM(f) => Some(f),
-            }
-        )
-    }
-}
-
-pub fn result_subtype(context: *mut context, subtype: u32) {
-    unsafe { invoke_sqlite!(result_subtype, context, subtype) }
-}
-
-pub fn set_auxdata(
-    context: *mut context,
-    n: c_int,
-    p: *mut c_void,
-    d: Option<unsafe extern "C" fn(*mut c_void)>,
-) {
-    unsafe { invoke_sqlite!(set_auxdata, context, n, p, d) }
-}
-
-pub fn get_auxdata(context: *mut context, n: c_int) -> *mut c_void {
-    unsafe { invoke_sqlite!(get_auxdata, context, n) }
 }
 
 pub type xFunc = unsafe extern "C" fn(*mut context, i32, *mut *mut value);
@@ -360,14 +205,177 @@ pub fn create_module_v2(
     unsafe { invoke_sqlite!(create_module_v2, db, s, module, p_app, destroy) }
 }
 
-pub fn vtab_distinct(index_info: *mut index_info) -> i32 {
-    unsafe { invoke_sqlite!(vtab_distinct, index_info) }
-}
-
 pub fn declare_vtab(db: *mut sqlite3, s: *const i8) -> i32 {
     unsafe { invoke_sqlite!(declare_vtab, db, s) }
 }
 
-pub fn close(db: *mut sqlite3) -> i32 {
-    unsafe { invoke_sqlite!(close, db) }
+pub fn finalize(stmt: *mut stmt) -> c_int {
+    unsafe { invoke_sqlite!(finalize, stmt) }
+}
+
+pub fn free(ptr: *mut u8) {
+    unsafe { invoke_sqlite!(free, ptr as *mut c_void) }
+}
+
+pub fn get_auxdata(context: *mut context, n: c_int) -> *mut c_void {
+    unsafe { invoke_sqlite!(get_auxdata, context, n) }
+}
+
+pub fn malloc(size: usize) -> *mut u8 {
+    unsafe {
+        if usize::BITS == 64 {
+            invoke_sqlite!(malloc64, size as uint64) as *mut u8
+        } else {
+            invoke_sqlite!(malloc, size as i32) as *mut u8
+        }
+    }
+}
+
+pub fn open(filename: *const c_char, db: *mut *mut sqlite3) -> i32 {
+    unsafe { invoke_sqlite!(open, filename, db) }
+}
+
+pub fn prepare_v2(
+    db: *mut sqlite3,
+    sql: *const c_char,
+    n: i32,
+    stmt: *mut *mut stmt,
+    leftover: *mut *const c_char,
+) -> i32 {
+    unsafe { invoke_sqlite!(prepare_v2, db, sql, n, stmt, leftover) }
+}
+
+pub fn result_int(context: *mut context, v: c_int) {
+    unsafe { invoke_sqlite!(result_int, context, v) }
+}
+
+pub fn result_blob(context: *mut context, b: *const u8, n: i32, d: Destructor) {
+    unsafe {
+        invoke_sqlite!(
+            result_blob,
+            context,
+            b as *const c_void,
+            n,
+            match d {
+                Destructor::TRANSIENT => Some(core::mem::transmute(-1_isize)),
+                Destructor::STATIC => None,
+                Destructor::CUSTOM(f) => Some(f),
+            }
+        )
+    }
+}
+
+pub fn result_int64(context: *mut context, v: int64) {
+    unsafe { invoke_sqlite!(result_int64, context, v) }
+}
+
+pub fn result_double(context: *mut context, f: f64) {
+    unsafe { invoke_sqlite!(result_double, context, f) }
+}
+
+pub fn result_null(context: *mut context) {
+    unsafe { invoke_sqlite!(result_null, context) }
+}
+pub fn result_pointer(
+    context: *mut context,
+    pointer: *mut c_void,
+    name: *mut c_char,
+    destructor: Option<unsafe extern "C" fn(*mut c_void)>,
+) {
+    unsafe { invoke_sqlite!(result_pointer, context, pointer, name, destructor) }
+}
+
+pub fn result_error(context: *mut context, text: &str) {
+    unsafe {
+        invoke_sqlite!(
+            result_error,
+            context,
+            text.as_ptr() as *mut c_char,
+            text.len() as i32
+        )
+    }
+}
+
+pub fn result_error_code(context: *mut context, code: i32) {
+    unsafe { invoke_sqlite!(result_error_code, context, code) }
+}
+
+// d is our destructor function.
+// -- https://dev.to/kgrech/7-ways-to-pass-a-string-between-rust-and-c-4ieb
+pub fn result_text(context: *mut context, s: *const i8, n: i32, d: Destructor) {
+    unsafe {
+        invoke_sqlite!(
+            result_text,
+            context,
+            s,
+            n,
+            match d {
+                Destructor::TRANSIENT => Some(core::mem::transmute(-1_isize)),
+                Destructor::STATIC => None,
+                Destructor::CUSTOM(f) => Some(f),
+            }
+        )
+    }
+}
+
+pub fn result_subtype(context: *mut context, subtype: u32) {
+    unsafe { invoke_sqlite!(result_subtype, context, subtype) }
+}
+
+pub fn set_auxdata(
+    context: *mut context,
+    n: c_int,
+    p: *mut c_void,
+    d: Option<unsafe extern "C" fn(*mut c_void)>,
+) {
+    unsafe { invoke_sqlite!(set_auxdata, context, n, p, d) }
+}
+
+pub fn step(stmt: *mut stmt) -> c_int {
+    unsafe { invoke_sqlite!(step, stmt) }
+}
+
+pub fn value_text<'a>(arg1: *mut value) -> &'a str {
+    unsafe {
+        let len = value_bytes(arg1);
+        let bytes = invoke_sqlite!(value_text, arg1);
+        let slice = core::slice::from_raw_parts(bytes as *const u8, len as usize);
+        core::str::from_utf8_unchecked(slice)
+    }
+}
+
+pub fn value_type(value: *mut value) -> i32 {
+    unsafe { invoke_sqlite!(value_type, value) }
+}
+
+pub fn value_bytes(arg1: *mut value) -> i32 {
+    unsafe { invoke_sqlite!(value_bytes, arg1) }
+}
+
+pub fn value_blob<'a>(value: *mut value) -> &'a [u8] {
+    unsafe {
+        let n = value_bytes(value);
+        let b = invoke_sqlite!(value_blob, value);
+        core::slice::from_raw_parts(b.cast::<u8>(), n as usize)
+    }
+}
+
+pub fn value_int(arg1: *mut value) -> i32 {
+    unsafe { invoke_sqlite!(value_int, arg1) }
+}
+
+pub fn value_int64(arg1: *mut value) -> int64 {
+    unsafe { invoke_sqlite!(value_int64, arg1) }
+}
+
+pub fn value_double(arg1: *mut value) -> f64 {
+    unsafe { invoke_sqlite!(value_double, arg1) }
+}
+
+pub fn value_pointer(arg1: *mut value, p: *mut c_char) -> *mut c_void {
+    unsafe { invoke_sqlite!(value_pointer, arg1, p) }
+}
+
+pub fn vtab_distinct(index_info: *mut index_info) -> i32 {
+    unsafe { invoke_sqlite!(vtab_distinct, index_info) }
 }

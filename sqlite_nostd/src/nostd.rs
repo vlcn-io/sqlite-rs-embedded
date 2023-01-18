@@ -139,6 +139,21 @@ pub enum ColumnType {
     Null = 5,
 }
 
+pub fn open(filename: *const c_char) -> Result<ManagedConnection, ResultCode> {
+    let mut db = core::ptr::null_mut();
+    let rc =
+        ResultCode::from_i32(sqlite3_capi::open(filename, &mut db as *mut *mut sqlite3)).unwrap();
+    if rc == ResultCode::OK {
+        Ok(ManagedConnection { db })
+    } else {
+        Err(rc)
+    }
+}
+
+pub struct ManagedConnection {
+    db: *mut sqlite3,
+}
+
 pub trait Connection {
     fn commit_hook(
         &self,
@@ -159,6 +174,44 @@ pub trait Connection {
     ) -> Result<ResultCode, ResultCode>;
 
     fn prepare_v2(&self, sql: &str) -> Result<Stmt, ResultCode>;
+}
+
+impl Connection for ManagedConnection {
+    fn commit_hook(
+        &self,
+        callback: Option<xCommitHook>,
+        user_data: *mut c_void,
+    ) -> Option<xCommitHook> {
+        self.db.commit_hook(callback, user_data)
+    }
+
+    fn create_function_v2(
+        &self,
+        name: *const c_char,
+        n_arg: i32,
+        flags: u32,
+        user_data: Option<*mut c_void>,
+        func: Option<xFunc>,
+        step: Option<xStep>,
+        final_func: Option<xFinal>,
+        destroy: Option<xDestroy>,
+    ) -> Result<ResultCode, ResultCode> {
+        self.db.create_function_v2(
+            name, n_arg, flags, user_data, func, step, final_func, destroy,
+        )
+    }
+
+    #[inline]
+    fn prepare_v2(&self, sql: &str) -> Result<Stmt, ResultCode> {
+        self.db.prepare_v2(sql)
+    }
+}
+
+impl Drop for ManagedConnection {
+    fn drop(&mut self) {
+        // todo: iterate over all stmts and finalize them?
+        sqlite3_capi::close(self.db);
+    }
 }
 
 impl Connection for *mut sqlite3 {
@@ -201,6 +254,7 @@ impl Connection for *mut sqlite3 {
         }
     }
 
+    #[inline]
     fn prepare_v2(&self, sql: &str) -> Result<Stmt, ResultCode> {
         let mut stmt = core::ptr::null_mut();
         let mut tail = core::ptr::null();
@@ -311,9 +365,11 @@ pub trait Context {
     fn result_blob_owned(&self, blob: Vec<u8>);
     fn result_blob_shared(&self, blob: &[u8]);
     fn result_blob_static(&self, blob: &'static [u8]);
+    fn result_error(&self, text: &str);
 }
 
 impl Context for *mut context {
+    #[inline]
     fn result_text_owned(&self, text: String) {
         let (ptr, len, _) = text.into_raw_parts();
         result_text(
@@ -326,6 +382,7 @@ impl Context for *mut context {
 
     /// Takes a reference to a string, has SQLite copy the contents
     /// and take ownership of the copy.
+    #[inline]
     fn result_text_shared(&self, text: &str) {
         result_text(
             *self,
@@ -337,6 +394,7 @@ impl Context for *mut context {
 
     /// Takes a reference to a string that is statically allocated.
     /// SQLite will not copy this string.
+    #[inline]
     fn result_text_static(&self, text: &'static str) {
         result_text(
             *self,
@@ -348,11 +406,13 @@ impl Context for *mut context {
 
     /// Passes ownership of the blob to SQLite without copying.
     /// SQLite will drop the blob when it is finished with it.
+    #[inline]
     fn result_blob_owned(&self, blob: Vec<u8>) {
         let (ptr, len, _) = blob.into_raw_parts();
         result_blob(*self, ptr, len as i32, Destructor::CUSTOM(droprust));
     }
 
+    #[inline]
     fn result_blob_shared(&self, blob: &[u8]) {
         result_blob(
             *self,
@@ -362,7 +422,13 @@ impl Context for *mut context {
         );
     }
 
+    #[inline]
     fn result_blob_static(&self, blob: &'static [u8]) {
         result_blob(*self, blob.as_ptr(), blob.len() as i32, Destructor::STATIC);
+    }
+
+    #[inline]
+    fn result_error(&self, text: &str) {
+        result_error(*self, text);
     }
 }
