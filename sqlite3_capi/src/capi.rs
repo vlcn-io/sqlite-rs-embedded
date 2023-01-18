@@ -1,6 +1,5 @@
 extern crate alloc;
 
-use alloc::ffi::{CString, NulError};
 use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 

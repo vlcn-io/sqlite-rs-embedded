@@ -432,3 +432,44 @@ impl Context for *mut context {
         result_error(*self, text);
     }
 }
+
+pub trait Value {
+    fn blob(&self) -> &[u8];
+    fn double(&self) -> f64;
+    fn int(&self) -> i32;
+    fn int64(&self) -> i64;
+    fn text(&self) -> &str;
+    fn bytes(&self) -> i32;
+}
+
+impl Value for *mut value {
+    #[inline]
+    fn blob(&self) -> &[u8] {
+        value_blob(*self)
+    }
+
+    #[inline]
+    fn double(&self) -> f64 {
+        value_double(*self)
+    }
+
+    #[inline]
+    fn int(&self) -> i32 {
+        value_int(*self)
+    }
+
+    #[inline]
+    fn int64(&self) -> i64 {
+        value_int64(*self)
+    }
+
+    #[inline]
+    fn text(&self) -> &str {
+        value_text(*self)
+    }
+
+    #[inline]
+    fn bytes(&self) -> i32 {
+        value_bytes(*self)
+    }
+}
