@@ -12,7 +12,7 @@ use num_traits::FromPrimitive;
 pub use sqlite3_allocator::*;
 pub use sqlite3_capi::*;
 
-#[derive(FromPrimitive, PartialEq)]
+#[derive(FromPrimitive, PartialEq, Debug)]
 pub enum ResultCode {
     OK = 0,
     ERROR = 1,
