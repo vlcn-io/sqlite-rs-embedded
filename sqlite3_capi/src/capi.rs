@@ -10,6 +10,7 @@ pub use crate::bindings::{
 };
 
 mod aliased {
+    #[cfg(feature = "omit_load_extension")]
     pub use crate::bindings::{
         sqlite3_bind_blob as bind_blob, sqlite3_bind_double as bind_double,
         sqlite3_bind_int as bind_int, sqlite3_bind_int64 as bind_int64,
