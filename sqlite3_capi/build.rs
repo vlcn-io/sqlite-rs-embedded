@@ -17,10 +17,13 @@ fn main() {
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
     // the resulting bindings.
+    // https://github.com/rust-lang/rust-bindgen/issues/751
+    // ^-- to get functions exposed in wasm
     let bindings = bindgen::Builder::default()
         // The input header we would like to generate
         // bindings for.
         .header("wrapper.h")
+        .clang_arg("-fvisibility=default")
         .use_core()
         // Tell cargo to invalidate the built crate whenever any of the
         // included header files changed.
