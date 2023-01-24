@@ -99,8 +99,12 @@ pub fn bind_text(stmt: *mut stmt, c: c_int, s: *const c_char, n: c_int) -> i32 {
     unsafe { invoke_sqlite!(bind_text, stmt, c, s, n, None) }
 }
 
-pub fn bind_pointer(db: *mut stmt, i: i32, p: *mut c_void, t: *const c_char) -> i32 {
+pub fn bind_pointer(db: *mut stmt, i: c_int, p: *mut c_void, t: *const c_char) -> i32 {
     unsafe { invoke_sqlite!(bind_pointer, db, i, p, t, None) }
+}
+
+pub fn bind_value(stmt: *mut stmt, c: c_int, v: *mut value) -> i32 {
+    unsafe { invoke_sqlite!(bind_value, stmt, c, v) }
 }
 
 pub fn close(db: *mut sqlite3) -> i32 {

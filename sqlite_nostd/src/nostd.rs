@@ -125,12 +125,6 @@ pub enum ResultCode {
 }
 
 #[derive(FromPrimitive, PartialEq)]
-pub enum StepCode {
-    Row = bindings::SQLITE_ROW as isize,
-    Done = bindings::SQLITE_DONE as isize,
-}
-
-#[derive(FromPrimitive, PartialEq)]
 pub enum ColumnType {
     Integer = 1,
     Float = 2,
@@ -173,7 +167,7 @@ pub trait Connection {
         destroy: Option<xDestroy>,
     ) -> Result<ResultCode, ResultCode>;
 
-    fn prepare_v2(&self, sql: &str) -> Result<Stmt, ResultCode>;
+    fn prepare_v2(&self, sql: &str) -> Result<ManagedStmt, ResultCode>;
 }
 
 impl Connection for ManagedConnection {
@@ -202,7 +196,7 @@ impl Connection for ManagedConnection {
     }
 
     #[inline]
-    fn prepare_v2(&self, sql: &str) -> Result<Stmt, ResultCode> {
+    fn prepare_v2(&self, sql: &str) -> Result<ManagedStmt, ResultCode> {
         self.db.prepare_v2(sql)
     }
 }
@@ -255,7 +249,7 @@ impl Connection for *mut sqlite3 {
     }
 
     #[inline]
-    fn prepare_v2(&self, sql: &str) -> Result<Stmt, ResultCode> {
+    fn prepare_v2(&self, sql: &str) -> Result<ManagedStmt, ResultCode> {
         let mut stmt = core::ptr::null_mut();
         let mut tail = core::ptr::null();
         let rc = ResultCode::from_i32(prepare_v2(
@@ -267,22 +261,22 @@ impl Connection for *mut sqlite3 {
         ))
         .unwrap();
         if rc == ResultCode::OK {
-            Ok(Stmt { stmt: stmt })
+            Ok(ManagedStmt { stmt: stmt })
         } else {
             Err(rc)
         }
     }
 }
 
-pub struct Stmt {
+pub struct ManagedStmt {
     stmt: *mut stmt,
 }
 
-impl Stmt {
-    pub fn step(&self) -> Result<StepCode, ResultCode> {
+impl ManagedStmt {
+    pub fn step(&self) -> Result<ResultCode, ResultCode> {
         let rc = ResultCode::from_i32(step(self.stmt)).unwrap();
         if (rc == ResultCode::ROW) || (rc == ResultCode::DONE) {
-            Ok(StepCode::from_i32(rc as i32).unwrap())
+            Ok(rc)
         } else {
             Err(rc)
         }
@@ -346,9 +340,33 @@ impl Stmt {
     pub fn column_int64(&self, i: i32) -> Result<i64, ResultCode> {
         Ok(column_int64(self.stmt, i))
     }
+
+    pub fn bind_value(&self, i: i32, val: *mut value) -> Result<(), ResultCode> {
+        let rc = ResultCode::from_i32(bind_value(self.stmt, i, val)).unwrap();
+        if rc == ResultCode::OK {
+            Ok(())
+        } else {
+            Err(rc)
+        }
+    }
+
+    pub fn bind_text(&self, i: i32, text: &str) -> Result<(), ResultCode> {
+        let rc = ResultCode::from_i32(bind_text(
+            self.stmt,
+            i,
+            text.as_ptr() as *const c_char,
+            text.len() as i32,
+        ))
+        .unwrap();
+        if rc == ResultCode::OK {
+            Ok(())
+        } else {
+            Err(rc)
+        }
+    }
 }
 
-impl Drop for Stmt {
+impl Drop for ManagedStmt {
     fn drop(&mut self) {
         finalize(self.stmt);
     }
