@@ -168,6 +168,12 @@ pub trait Connection {
     ) -> Result<ResultCode, ResultCode>;
 
     fn prepare_v2(&self, sql: &str) -> Result<ManagedStmt, ResultCode>;
+
+    /// sql should be a null terminated string! However you find is most efficient to craft those,
+    /// hence why we have no opinion on &str vs String vs CString vs whatever
+    /// todo: we should make some sort of opaque type to force null termination
+    /// this is inehritly unsafe
+    unsafe fn exec(&self, sql: *const i8) -> Result<(), ResultCode>;
 }
 
 impl Connection for ManagedConnection {
@@ -179,6 +185,8 @@ impl Connection for ManagedConnection {
         self.db.commit_hook(callback, user_data)
     }
 
+    /// TODO: create_function is infrequent enough that we can pay the cost of the copy rather than
+    /// take a c_char
     fn create_function_v2(
         &self,
         name: *const c_char,
@@ -198,6 +206,11 @@ impl Connection for ManagedConnection {
     #[inline]
     fn prepare_v2(&self, sql: &str) -> Result<ManagedStmt, ResultCode> {
         self.db.prepare_v2(sql)
+    }
+
+    #[inline]
+    unsafe fn exec(&self, sql: *const i8) -> Result<(), ResultCode> {
+        self.db.exec(sql)
     }
 }
 
@@ -262,6 +275,15 @@ impl Connection for *mut sqlite3 {
         .unwrap();
         if rc == ResultCode::OK {
             Ok(ManagedStmt { stmt: stmt })
+        } else {
+            Err(rc)
+        }
+    }
+
+    unsafe fn exec(&self, sql: *const i8) -> Result<(), ResultCode> {
+        let rc = ResultCode::from_i32(exec(*self, sql)).unwrap();
+        if rc == ResultCode::OK {
+            Ok(())
         } else {
             Err(rc)
         }

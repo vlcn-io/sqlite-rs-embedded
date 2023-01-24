@@ -28,9 +28,9 @@ mod aliased {
         sqlite3_column_type as column_type, sqlite3_column_value as column_value,
         sqlite3_commit_hook as commit_hook, sqlite3_create_function_v2 as create_function_v2,
         sqlite3_create_module_v2 as create_module_v2, sqlite3_declare_vtab as declare_vtab,
-        sqlite3_finalize as finalize, sqlite3_free as free, sqlite3_get_auxdata as get_auxdata,
-        sqlite3_malloc as malloc, sqlite3_malloc64 as malloc64, sqlite3_open as open,
-        sqlite3_prepare_v2 as prepare_v2, sqlite3_reset as reset,
+        sqlite3_exec as exec, sqlite3_finalize as finalize, sqlite3_free as free,
+        sqlite3_get_auxdata as get_auxdata, sqlite3_malloc as malloc, sqlite3_malloc64 as malloc64,
+        sqlite3_open as open, sqlite3_prepare_v2 as prepare_v2, sqlite3_reset as reset,
         sqlite3_result_blob as result_blob, sqlite3_result_double as result_double,
         sqlite3_result_error as result_error, sqlite3_result_error_code as result_error_code,
         sqlite3_result_int as result_int, sqlite3_result_int64 as result_int64,
@@ -211,6 +211,10 @@ pub fn create_module_v2(
 
 pub fn declare_vtab(db: *mut sqlite3, s: *const i8) -> i32 {
     unsafe { invoke_sqlite!(declare_vtab, db, s) }
+}
+
+pub fn exec(db: *mut sqlite3, s: *const i8) -> i32 {
+    unsafe { invoke_sqlite!(exec, db, s, None, ptr::null_mut(), ptr::null_mut()) }
 }
 
 pub fn finalize(stmt: *mut stmt) -> c_int {
