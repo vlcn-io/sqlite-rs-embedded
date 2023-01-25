@@ -1,7 +1,7 @@
 extern crate alloc;
 
-use alloc::string::String;
 use alloc::vec::Vec;
+use alloc::{ffi::CString, string::String};
 use core::ffi::{c_char, c_void};
 
 #[cfg(not(feature = "std"))]
@@ -157,7 +157,7 @@ pub trait Connection {
 
     fn create_function_v2(
         &self,
-        name: *const c_char,
+        name: &str,
         n_arg: i32,
         flags: u32,
         user_data: Option<*mut c_void>,
@@ -173,7 +173,9 @@ pub trait Connection {
     /// hence why we have no opinion on &str vs String vs CString vs whatever
     /// todo: we should make some sort of opaque type to force null termination
     /// this is inehritly unsafe
-    unsafe fn exec(&self, sql: *const i8) -> Result<(), ResultCode>;
+    unsafe fn exec(&self, sql: *const i8) -> Result<ResultCode, ResultCode>;
+
+    fn exec_safe(&self, sql: &str) -> Result<ResultCode, ResultCode>;
 }
 
 impl Connection for ManagedConnection {
@@ -189,7 +191,7 @@ impl Connection for ManagedConnection {
     /// take a c_char
     fn create_function_v2(
         &self,
-        name: *const c_char,
+        name: &str,
         n_arg: i32,
         flags: u32,
         user_data: Option<*mut c_void>,
@@ -209,8 +211,13 @@ impl Connection for ManagedConnection {
     }
 
     #[inline]
-    unsafe fn exec(&self, sql: *const i8) -> Result<(), ResultCode> {
+    unsafe fn exec(&self, sql: *const i8) -> Result<ResultCode, ResultCode> {
         self.db.exec(sql)
+    }
+
+    #[inline]
+    fn exec_safe(&self, sql: &str) -> Result<ResultCode, ResultCode> {
+        self.db.exec_safe(sql)
     }
 }
 
@@ -233,7 +240,7 @@ impl Connection for *mut sqlite3 {
     /// name must be a properly null terminated c-string with a permanent lifetime.
     fn create_function_v2(
         &self,
-        name: *const c_char,
+        name: &str,
         n_arg: i32,
         flags: u32,
         user_data: Option<*mut c_void>,
@@ -242,22 +249,20 @@ impl Connection for *mut sqlite3 {
         final_func: Option<xFinal>,
         destroy: Option<xDestroy>,
     ) -> Result<ResultCode, ResultCode> {
-        let rc = ResultCode::from_i32(create_function_v2(
-            *self,
-            name,
-            n_arg,
-            flags,
-            user_data.unwrap_or(core::ptr::null_mut()),
-            func,
-            step,
-            final_func,
-            destroy,
-        ))
-        .unwrap();
-        if rc == ResultCode::OK {
-            Ok(ResultCode::OK)
+        if let Ok(name) = CString::new(name) {
+            convert_rc(create_function_v2(
+                *self,
+                name.as_ptr(),
+                n_arg,
+                flags,
+                user_data.unwrap_or(core::ptr::null_mut()),
+                func,
+                step,
+                final_func,
+                destroy,
+            ))
         } else {
-            Err(rc)
+            Err(ResultCode::NOMEM)
         }
     }
 
@@ -280,13 +285,27 @@ impl Connection for *mut sqlite3 {
         }
     }
 
-    unsafe fn exec(&self, sql: *const i8) -> Result<(), ResultCode> {
-        let rc = ResultCode::from_i32(exec(*self, sql)).unwrap();
-        if rc == ResultCode::OK {
-            Ok(())
+    #[inline]
+    unsafe fn exec(&self, sql: *const i8) -> Result<ResultCode, ResultCode> {
+        convert_rc(exec(*self, sql))
+    }
+
+    #[inline]
+    fn exec_safe(&self, sql: &str) -> Result<ResultCode, ResultCode> {
+        if let Ok(sql) = CString::new(sql) {
+            convert_rc(exec(*self, sql.as_ptr()))
         } else {
-            Err(rc)
+            return Err(ResultCode::NOMEM);
         }
+    }
+}
+
+fn convert_rc(rc: i32) -> Result<ResultCode, ResultCode> {
+    let rc = ResultCode::from_i32(rc).unwrap();
+    if rc == ResultCode::OK {
+        Ok(rc)
+    } else {
+        Err(rc)
     }
 }
 
