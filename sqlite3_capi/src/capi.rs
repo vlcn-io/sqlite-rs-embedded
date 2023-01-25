@@ -95,6 +95,14 @@ pub fn EXTENSION_INIT2(api: *mut api_routines) {
     }
 }
 
+pub fn bind_int(stmt: *mut stmt, c: c_int, i: c_int) -> i32 {
+    unsafe { invoke_sqlite!(bind_int, stmt, c, i) }
+}
+
+pub fn bind_int64(stmt: *mut stmt, c: c_int, i: int64) -> i32 {
+    unsafe { invoke_sqlite!(bind_int64, stmt, c, i) }
+}
+
 pub fn bind_text(stmt: *mut stmt, c: c_int, s: *const c_char, n: c_int) -> i32 {
     unsafe { invoke_sqlite!(bind_text, stmt, c, s, n, None) }
 }
@@ -166,6 +174,10 @@ pub fn column_int64(stmt: *mut stmt, c: c_int) -> int64 {
 
 pub fn column_name(stmt: *mut stmt, c: c_int) -> *const c_char {
     unsafe { invoke_sqlite!(column_name, stmt, c) }
+}
+
+pub fn context_db_handle(ctx: *mut context) -> *mut sqlite3 {
+    unsafe { invoke_sqlite!(context_db_handle, ctx) }
 }
 
 pub type xFunc = unsafe extern "C" fn(*mut context, i32, *mut *mut value);
@@ -337,6 +349,10 @@ pub fn set_auxdata(
     d: Option<unsafe extern "C" fn(*mut c_void)>,
 ) {
     unsafe { invoke_sqlite!(set_auxdata, context, n, p, d) }
+}
+
+pub fn reset(stmt: *mut stmt) -> c_int {
+    unsafe { invoke_sqlite!(reset, stmt) }
 }
 
 pub fn step(stmt: *mut stmt) -> c_int {

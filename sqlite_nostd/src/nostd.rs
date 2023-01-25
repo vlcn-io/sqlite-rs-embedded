@@ -314,6 +314,10 @@ pub struct ManagedStmt {
 }
 
 impl ManagedStmt {
+    pub fn reset(&self) -> Result<ResultCode, ResultCode> {
+        convert_rc(reset(self.stmt))
+    }
+
     pub fn step(&self) -> Result<ResultCode, ResultCode> {
         let rc = ResultCode::from_i32(step(self.stmt)).unwrap();
         if (rc == ResultCode::ROW) || (rc == ResultCode::DONE) {
@@ -323,6 +327,7 @@ impl ManagedStmt {
         }
     }
 
+    #[inline]
     pub fn column_count(&self) -> i32 {
         column_count(self.stmt)
     }
@@ -330,6 +335,7 @@ impl ManagedStmt {
     /// Calls to `step` or addiitonal calls to `column_name` will invalidate the
     /// returned string. Unclear if there's any way to capture this
     /// behavior in the type system.
+    #[inline]
     pub fn column_name(&self, i: i32) -> Result<&str, ResultCode> {
         let ptr = column_name(self.stmt, i);
         if ptr.is_null() {
@@ -343,10 +349,12 @@ impl ManagedStmt {
         }
     }
 
+    #[inline]
     pub fn column_type(&self, i: i32) -> Result<ColumnType, ResultCode> {
         ColumnType::from_i32(column_type(self.stmt, i)).ok_or(ResultCode::NULL)
     }
 
+    #[inline]
     pub fn column_text(&self, i: i32) -> Result<&str, ResultCode> {
         let ptr = column_text(self.stmt, i);
         if ptr.is_null() {
@@ -360,6 +368,7 @@ impl ManagedStmt {
         }
     }
 
+    #[inline]
     pub fn column_blob(&self, i: i32) -> Result<&[u8], ResultCode> {
         let len = column_bytes(self.stmt, i);
         let ptr = column_blob(self.stmt, i);
@@ -370,40 +379,44 @@ impl ManagedStmt {
         }
     }
 
+    #[inline]
     pub fn column_double(&self, i: i32) -> Result<f64, ResultCode> {
         Ok(column_double(self.stmt, i))
     }
 
+    #[inline]
     pub fn column_int(&self, i: i32) -> Result<i32, ResultCode> {
         Ok(column_int(self.stmt, i))
     }
 
+    #[inline]
     pub fn column_int64(&self, i: i32) -> Result<i64, ResultCode> {
         Ok(column_int64(self.stmt, i))
     }
 
-    pub fn bind_value(&self, i: i32, val: *mut value) -> Result<(), ResultCode> {
-        let rc = ResultCode::from_i32(bind_value(self.stmt, i, val)).unwrap();
-        if rc == ResultCode::OK {
-            Ok(())
-        } else {
-            Err(rc)
-        }
+    #[inline]
+    pub fn bind_value(&self, i: i32, val: *mut value) -> Result<ResultCode, ResultCode> {
+        convert_rc(bind_value(self.stmt, i, val))
     }
 
-    pub fn bind_text(&self, i: i32, text: &str) -> Result<(), ResultCode> {
-        let rc = ResultCode::from_i32(bind_text(
+    #[inline]
+    pub fn bind_text(&self, i: i32, text: &str) -> Result<ResultCode, ResultCode> {
+        convert_rc(bind_text(
             self.stmt,
             i,
             text.as_ptr() as *const c_char,
             text.len() as i32,
         ))
-        .unwrap();
-        if rc == ResultCode::OK {
-            Ok(())
-        } else {
-            Err(rc)
-        }
+    }
+
+    #[inline]
+    pub fn bind_int64(&self, i: i32, val: i64) -> Result<ResultCode, ResultCode> {
+        convert_rc(bind_int64(self.stmt, i, val))
+    }
+
+    #[inline]
+    pub fn bind_int(&self, i: i32, val: i32) -> Result<ResultCode, ResultCode> {
+        convert_rc(bind_int(self.stmt, i, val))
     }
 }
 
@@ -425,6 +438,7 @@ pub trait Context {
     fn result_blob_shared(&self, blob: &[u8]);
     fn result_blob_static(&self, blob: &'static [u8]);
     fn result_error(&self, text: &str);
+    fn db_handle(&self) -> *mut sqlite3;
 }
 
 impl Context for *mut context {
@@ -489,6 +503,11 @@ impl Context for *mut context {
     #[inline]
     fn result_error(&self, text: &str) {
         result_error(*self, text);
+    }
+
+    #[inline]
+    fn db_handle(&self) -> *mut sqlite3 {
+        context_db_handle(*self)
     }
 }
 
