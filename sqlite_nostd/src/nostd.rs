@@ -395,6 +395,16 @@ impl ManagedStmt {
     }
 
     #[inline]
+    pub fn column_value(&self, i: i32) -> Result<*mut value, ResultCode> {
+        let ptr = column_value(self.stmt, i);
+        if ptr.is_null() {
+            Err(ResultCode::NULL)
+        } else {
+            Ok(ptr)
+        }
+    }
+
+    #[inline]
     pub fn bind_value(&self, i: i32, val: *mut value) -> Result<ResultCode, ResultCode> {
         convert_rc(bind_value(self.stmt, i, val))
     }
