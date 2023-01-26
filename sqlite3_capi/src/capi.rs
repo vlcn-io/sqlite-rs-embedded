@@ -6,7 +6,9 @@ use core::ptr;
 pub use crate::bindings::{
     sqlite3, sqlite3_api_routines as api_routines, sqlite3_context as context,
     sqlite3_index_info as index_info, sqlite3_module as module, sqlite3_stmt as stmt,
-    sqlite3_uint64 as uint64, sqlite3_value as value, sqlite_int64 as int64, SQLITE_UTF8 as UTF8,
+    sqlite3_uint64 as uint64, sqlite3_value as value, sqlite_int64 as int64,
+    SQLITE_DETERMINISTIC as DETERMINISTIC, SQLITE_DIRECTONLY as DIRECTONLY,
+    SQLITE_INNOCUOUS as INNOCUOUS, SQLITE_UTF8 as UTF8,
 };
 
 mod aliased {
