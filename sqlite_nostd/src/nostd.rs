@@ -450,10 +450,16 @@ pub trait Context {
     fn result_blob_shared(&self, blob: &[u8]);
     fn result_blob_static(&self, blob: &'static [u8]);
     fn result_error(&self, text: &str);
+    fn result_null(&self);
     fn db_handle(&self) -> *mut sqlite3;
 }
 
 impl Context for *mut context {
+    #[inline]
+    fn result_null(&self) {
+        result_null(*self)
+    }
+
     #[inline]
     fn result_text_owned(&self, text: String) {
         let (ptr, len, _) = text.into_raw_parts();
