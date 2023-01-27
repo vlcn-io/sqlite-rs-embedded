@@ -356,16 +356,7 @@ impl ManagedStmt {
 
     #[inline]
     pub fn column_text(&self, i: i32) -> Result<&str, ResultCode> {
-        let ptr = column_text(self.stmt, i);
-        if ptr.is_null() {
-            Err(ResultCode::NULL)
-        } else {
-            Ok(unsafe {
-                core::str::from_utf8_unchecked(
-                    core::ffi::CStr::from_ptr(ptr as *const i8).to_bytes(),
-                )
-            })
-        }
+        Ok(column_text(self.stmt, i))
     }
 
     #[inline]

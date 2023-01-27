@@ -147,8 +147,13 @@ pub fn column_count(stmt: *mut stmt) -> i32 {
     unsafe { invoke_sqlite!(column_count, stmt) }
 }
 
-pub fn column_text(stmt: *mut stmt, c: c_int) -> *const c_uchar {
-    unsafe { invoke_sqlite!(column_text, stmt, c) }
+pub fn column_text<'a>(stmt: *mut stmt, c: c_int) -> &'a str {
+    unsafe {
+        let len = column_bytes(stmt, c);
+        let bytes = invoke_sqlite!(column_text, stmt, c);
+        let slice = core::slice::from_raw_parts(bytes as *const u8, len as usize);
+        core::str::from_utf8_unchecked(slice)
+    }
 }
 
 pub fn column_blob(stmt: *mut stmt, c: c_int) -> *const c_void {
