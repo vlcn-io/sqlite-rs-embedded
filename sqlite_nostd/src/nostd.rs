@@ -528,9 +528,15 @@ pub trait Value {
     fn int64(&self) -> i64;
     fn text(&self) -> &str;
     fn bytes(&self) -> i32;
+    fn value_type(&self) -> ColumnType;
 }
 
 impl Value for *mut value {
+    #[inline]
+    fn value_type(&self) -> ColumnType {
+        ColumnType::from_i32(value_type(*self)).unwrap()
+    }
+
     #[inline]
     fn blob(&self) -> &[u8] {
         value_blob(*self)
