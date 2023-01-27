@@ -1,5 +1,6 @@
 extern crate alloc;
 
+use alloc::ffi::IntoStringError;
 use alloc::vec::Vec;
 use alloc::{ffi::CString, string::String};
 use core::ffi::{c_char, c_void};
@@ -176,6 +177,8 @@ pub trait Connection {
     unsafe fn exec(&self, sql: *const i8) -> Result<ResultCode, ResultCode>;
 
     fn exec_safe(&self, sql: &str) -> Result<ResultCode, ResultCode>;
+
+    fn errmsg(&self) -> Result<String, IntoStringError>;
 }
 
 impl Connection for ManagedConnection {
@@ -218,6 +221,10 @@ impl Connection for ManagedConnection {
     #[inline]
     fn exec_safe(&self, sql: &str) -> Result<ResultCode, ResultCode> {
         self.db.exec_safe(sql)
+    }
+
+    fn errmsg(&self) -> Result<String, IntoStringError> {
+        self.db.errmsg()
     }
 }
 
@@ -297,6 +304,10 @@ impl Connection for *mut sqlite3 {
         } else {
             return Err(ResultCode::NOMEM);
         }
+    }
+
+    fn errmsg(&self) -> Result<String, IntoStringError> {
+        errmsg(*self).into_string()
     }
 }
 

@@ -1,7 +1,10 @@
 extern crate alloc;
 
-use core::ffi::{c_char, c_int, c_uchar, c_void};
+use core::ffi::{c_char, c_int, c_void, CStr};
 use core::ptr;
+
+use alloc::borrow::ToOwned;
+use alloc::ffi::CString;
 
 pub use crate::bindings::{
     sqlite3, sqlite3_api_routines as api_routines, sqlite3_context as context,
@@ -31,22 +34,23 @@ mod aliased {
         sqlite3_commit_hook as commit_hook, sqlite3_context_db_handle as context_db_handle,
         sqlite3_create_function_v2 as create_function_v2,
         sqlite3_create_module_v2 as create_module_v2, sqlite3_declare_vtab as declare_vtab,
-        sqlite3_exec as exec, sqlite3_finalize as finalize, sqlite3_free as free,
-        sqlite3_get_auxdata as get_auxdata, sqlite3_malloc as malloc, sqlite3_malloc64 as malloc64,
-        sqlite3_open as open, sqlite3_prepare_v2 as prepare_v2, sqlite3_reset as reset,
-        sqlite3_result_blob as result_blob, sqlite3_result_double as result_double,
-        sqlite3_result_error as result_error, sqlite3_result_error_code as result_error_code,
-        sqlite3_result_int as result_int, sqlite3_result_int64 as result_int64,
-        sqlite3_result_null as result_null, sqlite3_result_pointer as result_pointer,
-        sqlite3_result_subtype as result_subtype, sqlite3_result_text as result_text,
-        sqlite3_result_value as result_value, sqlite3_set_auxdata as set_auxdata,
-        sqlite3_step as step, sqlite3_value_blob as value_blob, sqlite3_value_bytes as value_bytes,
-        sqlite3_value_double as value_double, sqlite3_value_int as value_int,
-        sqlite3_value_int64 as value_int64, sqlite3_value_pointer as value_pointer,
-        sqlite3_value_subtype as value_subtype, sqlite3_value_text as value_text,
-        sqlite3_value_type as value_type, sqlite3_vtab_collation as vtab_collation,
-        sqlite3_vtab_config as vtab_config, sqlite3_vtab_distinct as vtab_distinct,
-        sqlite3_vtab_nochange as vtab_nochange, sqlite3_vtab_on_conflict as vtab_on_conflict,
+        sqlite3_errmsg as errmsg, sqlite3_exec as exec, sqlite3_finalize as finalize,
+        sqlite3_free as free, sqlite3_get_auxdata as get_auxdata, sqlite3_malloc as malloc,
+        sqlite3_malloc64 as malloc64, sqlite3_open as open, sqlite3_prepare_v2 as prepare_v2,
+        sqlite3_reset as reset, sqlite3_result_blob as result_blob,
+        sqlite3_result_double as result_double, sqlite3_result_error as result_error,
+        sqlite3_result_error_code as result_error_code, sqlite3_result_int as result_int,
+        sqlite3_result_int64 as result_int64, sqlite3_result_null as result_null,
+        sqlite3_result_pointer as result_pointer, sqlite3_result_subtype as result_subtype,
+        sqlite3_result_text as result_text, sqlite3_result_value as result_value,
+        sqlite3_set_auxdata as set_auxdata, sqlite3_step as step, sqlite3_value_blob as value_blob,
+        sqlite3_value_bytes as value_bytes, sqlite3_value_double as value_double,
+        sqlite3_value_int as value_int, sqlite3_value_int64 as value_int64,
+        sqlite3_value_pointer as value_pointer, sqlite3_value_subtype as value_subtype,
+        sqlite3_value_text as value_text, sqlite3_value_type as value_type,
+        sqlite3_vtab_collation as vtab_collation, sqlite3_vtab_config as vtab_config,
+        sqlite3_vtab_distinct as vtab_distinct, sqlite3_vtab_nochange as vtab_nochange,
+        sqlite3_vtab_on_conflict as vtab_on_conflict,
     };
 }
 
@@ -231,6 +235,10 @@ pub fn create_module_v2(
 
 pub fn declare_vtab(db: *mut sqlite3, s: *const i8) -> i32 {
     unsafe { invoke_sqlite!(declare_vtab, db, s) }
+}
+
+pub fn errmsg(db: *mut sqlite3) -> CString {
+    unsafe { CStr::from_ptr(invoke_sqlite!(errmsg, db)).to_owned() }
 }
 
 pub fn exec(db: *mut sqlite3, s: *const i8) -> i32 {

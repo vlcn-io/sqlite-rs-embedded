@@ -1,5 +1,7 @@
 # SQLite no_std
 
+> Note: these bindings are faithful to the base SQLite C-API as much as possible for minimum rust<->c overhead. This, however, means that the bindings are not entirely safe. E.g., the SQLite statement object will clear returned values out from under you if you step or finalize it while those references exist in your Rust program.
+
 SQLite is lite. Its bindings should be lite too. They should be able to be used _anywhere_ SQLite is used, _not_ incur any performance impact, _not_ include any extra dependencies, and be usable against _any_ SQLite version.
 
 Thus this repository was born.
