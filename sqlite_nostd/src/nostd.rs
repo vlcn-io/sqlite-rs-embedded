@@ -444,7 +444,7 @@ pub trait Context {
     /// This method will correctly drop the string when SQLite is finished
     /// using it.
     fn result_text_owned(&self, text: String);
-    fn result_text_shared(&self, text: &str);
+    fn result_text_transient(&self, text: &str);
     fn result_text_static(&self, text: &'static str);
     fn result_blob_owned(&self, blob: Vec<u8>);
     fn result_blob_shared(&self, blob: &[u8]);
@@ -460,6 +460,7 @@ impl Context for *mut context {
         result_null(*self)
     }
 
+    /// TODO: do not use this right now! The drop is not dropping according to valgrind.
     #[inline]
     fn result_text_owned(&self, text: String) {
         let (ptr, len, _) = text.into_raw_parts();
@@ -467,6 +468,8 @@ impl Context for *mut context {
             *self,
             ptr as *const c_char,
             len as i32,
+            // TODO: this drop code does not seem to work
+            // Valgrind tells us we have a memory leak when using `result_text_owned`
             Destructor::CUSTOM(droprust),
         );
     }
@@ -474,7 +477,7 @@ impl Context for *mut context {
     /// Takes a reference to a string, has SQLite copy the contents
     /// and take ownership of the copy.
     #[inline]
-    fn result_text_shared(&self, text: &str) {
+    fn result_text_transient(&self, text: &str) {
         result_text(
             *self,
             text.as_ptr() as *mut c_char,
