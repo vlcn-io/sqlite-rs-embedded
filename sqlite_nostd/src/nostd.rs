@@ -174,7 +174,7 @@ pub trait Connection {
     /// hence why we have no opinion on &str vs String vs CString vs whatever
     /// todo: we should make some sort of opaque type to force null termination
     /// this is inehritly unsafe
-    unsafe fn exec(&self, sql: *const i8) -> Result<ResultCode, ResultCode>;
+    unsafe fn exec(&self, sql: *const c_char) -> Result<ResultCode, ResultCode>;
 
     fn exec_safe(&self, sql: &str) -> Result<ResultCode, ResultCode>;
 
@@ -214,7 +214,7 @@ impl Connection for ManagedConnection {
     }
 
     #[inline]
-    unsafe fn exec(&self, sql: *const i8) -> Result<ResultCode, ResultCode> {
+    unsafe fn exec(&self, sql: *const c_char) -> Result<ResultCode, ResultCode> {
         self.db.exec(sql)
     }
 
@@ -293,7 +293,7 @@ impl Connection for *mut sqlite3 {
     }
 
     #[inline]
-    unsafe fn exec(&self, sql: *const i8) -> Result<ResultCode, ResultCode> {
+    unsafe fn exec(&self, sql: *const c_char) -> Result<ResultCode, ResultCode> {
         convert_rc(exec(*self, sql))
     }
 

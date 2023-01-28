@@ -225,7 +225,7 @@ pub fn create_function_v2(
 
 pub fn create_module_v2(
     db: *mut sqlite3,
-    s: *const i8,
+    s: *const c_char,
     module: *const module,
     p_app: *mut c_void,
     destroy: Option<unsafe extern "C" fn(*mut c_void)>,
@@ -233,7 +233,7 @@ pub fn create_module_v2(
     unsafe { invoke_sqlite!(create_module_v2, db, s, module, p_app, destroy) }
 }
 
-pub fn declare_vtab(db: *mut sqlite3, s: *const i8) -> i32 {
+pub fn declare_vtab(db: *mut sqlite3, s: *const c_char) -> i32 {
     unsafe { invoke_sqlite!(declare_vtab, db, s) }
 }
 
@@ -241,7 +241,7 @@ pub fn errmsg(db: *mut sqlite3) -> CString {
     unsafe { CStr::from_ptr(invoke_sqlite!(errmsg, db)).to_owned() }
 }
 
-pub fn exec(db: *mut sqlite3, s: *const i8) -> i32 {
+pub fn exec(db: *mut sqlite3, s: *const c_char) -> i32 {
     unsafe { invoke_sqlite!(exec, db, s, None, ptr::null_mut(), ptr::null_mut()) }
 }
 
@@ -338,7 +338,7 @@ pub fn result_error_code(context: *mut context, code: i32) {
 
 // d is our destructor function.
 // -- https://dev.to/kgrech/7-ways-to-pass-a-string-between-rust-and-c-4ieb
-pub fn result_text(context: *mut context, s: *const i8, n: i32, d: Destructor) {
+pub fn result_text(context: *mut context, s: *const c_char, n: i32, d: Destructor) {
     unsafe {
         invoke_sqlite!(
             result_text,
