@@ -244,7 +244,6 @@ impl Connection for *mut sqlite3 {
         commit_hook(*self, callback, user_data)
     }
 
-    /// name must be a properly null terminated c-string with a permanent lifetime.
     fn create_function_v2(
         &self,
         name: &str,
