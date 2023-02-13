@@ -15,7 +15,7 @@ pub use crate::bindings::{
 };
 
 mod aliased {
-    #[cfg(feature = "omit_load_extension")]
+    #[cfg(feature = "static")]
     pub use crate::bindings::{
         sqlite3_bind_blob as bind_blob, sqlite3_bind_double as bind_double,
         sqlite3_bind_int as bind_int, sqlite3_bind_int64 as bind_int64,
@@ -67,14 +67,14 @@ macro_rules! strlit {
     };
 }
 
-#[cfg(feature = "omit_load_extension")]
+#[cfg(feature = "static")]
 macro_rules! invoke_sqlite {
     ($name:ident, $($arg:expr),*) => {
       aliased::$name($($arg),*)
     };
 }
 
-#[cfg(not(feature = "omit_load_extension"))]
+#[cfg(feature = "loadable_extension")]
 macro_rules! invoke_sqlite {
   ($name:ident, $($arg:expr),*) => {
     ((*SQLITE3_API).$name.unwrap())($($arg),*)
@@ -267,9 +267,9 @@ pub fn declare_vtab(db: *mut sqlite3, s: *const c_char) -> i32 {
     unsafe { invoke_sqlite!(declare_vtab, db, s) }
 }
 
-#[cfg(not(feature = "omit_load_extension"))]
+#[cfg(all(feature = "static", not(feature = "omit_load_extension")))]
 pub fn enable_load_extension(db: *mut sqlite3, onoff: c_int) -> i32 {
-    unsafe { invoke_sqlite!(enable_load_extension, db, onoff) }
+    unsafe { crate::bindings::sqlite3_enable_load_extension(db, onoff) }
 }
 
 pub fn errmsg(db: *mut sqlite3) -> CString {
@@ -293,14 +293,14 @@ pub fn get_auxdata(context: *mut context, n: c_int) -> *mut c_void {
     unsafe { invoke_sqlite!(get_auxdata, context, n) }
 }
 
-#[cfg(not(feature = "omit_load_extension"))]
+#[cfg(all(feature = "static", not(feature = "omit_load_extension")))]
 pub fn load_extension(
     db: *mut sqlite3,
     zfile: *const c_char,
     zproc: *const c_char,
     pzerr: *mut *mut c_char,
 ) -> i32 {
-    unsafe { invoke_sqlite!(load_extension, db, zfile, zproc, pzerr) }
+    unsafe { crate::bindings::sqlite3_load_extension(db, zfile, zproc, pzerr) }
 }
 
 #[inline]

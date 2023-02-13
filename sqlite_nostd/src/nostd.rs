@@ -168,7 +168,7 @@ pub trait Connection {
         destroy: Option<xDestroy>,
     ) -> Result<ResultCode, ResultCode>;
 
-    #[cfg(not(feature = "omit_load_extension"))]
+    #[cfg(all(feature = "static", not(feature = "omit_load_extension")))]
     fn enable_load_extension(&self, enable: bool) -> Result<ResultCode, ResultCode>;
 
     fn errmsg(&self) -> Result<String, IntoStringError>;
@@ -181,7 +181,7 @@ pub trait Connection {
 
     fn exec_safe(&self, sql: &str) -> Result<ResultCode, ResultCode>;
 
-    #[cfg(not(feature = "omit_load_extension"))]
+    #[cfg(all(feature = "static", not(feature = "omit_load_extension")))]
     fn load_extension(
         &self,
         filename: &str,
@@ -233,7 +233,7 @@ impl Connection for ManagedConnection {
         self.db.exec_safe(sql)
     }
 
-    #[cfg(not(feature = "omit_load_extension"))]
+    #[cfg(all(feature = "static", not(feature = "omit_load_extension")))]
     fn enable_load_extension(&self, enable: bool) -> Result<ResultCode, ResultCode> {
         self.db.enable_load_extension(enable)
     }
@@ -243,7 +243,7 @@ impl Connection for ManagedConnection {
         self.db.errmsg()
     }
 
-    #[cfg(not(feature = "omit_load_extension"))]
+    #[cfg(all(feature = "static", not(feature = "omit_load_extension")))]
     fn load_extension(
         &self,
         filename: &str,
@@ -330,12 +330,12 @@ impl Connection for *mut sqlite3 {
         }
     }
 
-    #[cfg(not(feature = "omit_load_extension"))]
+    #[cfg(all(feature = "static", not(feature = "omit_load_extension")))]
     fn enable_load_extension(&self, enable: bool) -> Result<ResultCode, ResultCode> {
         convert_rc(enable_load_extension(*self, if enable { 1 } else { 0 }))
     }
 
-    #[cfg(not(feature = "omit_load_extension"))]
+    #[cfg(all(feature = "static", not(feature = "omit_load_extension")))]
     fn load_extension(
         &self,
         filename: &str,
