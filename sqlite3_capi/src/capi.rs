@@ -102,6 +102,23 @@ pub fn EXTENSION_INIT2(api: *mut api_routines) {
     }
 }
 
+pub fn bind_blob(stmt: *mut stmt, c: c_int, blob: *const c_void, len: c_int, d: Destructor) -> i32 {
+    unsafe {
+        invoke_sqlite!(
+            bind_blob,
+            stmt,
+            c,
+            blob,
+            len,
+            match d {
+                Destructor::TRANSIENT => Some(core::mem::transmute(-1_isize)),
+                Destructor::STATIC => None,
+                Destructor::CUSTOM(f) => Some(f),
+            }
+        )
+    }
+}
+
 pub fn bind_int(stmt: *mut stmt, c: c_int, i: c_int) -> i32 {
     unsafe { invoke_sqlite!(bind_int, stmt, c, i) }
 }
@@ -110,8 +127,21 @@ pub fn bind_int64(stmt: *mut stmt, c: c_int, i: int64) -> i32 {
     unsafe { invoke_sqlite!(bind_int64, stmt, c, i) }
 }
 
-pub fn bind_text(stmt: *mut stmt, c: c_int, s: *const c_char, n: c_int) -> i32 {
-    unsafe { invoke_sqlite!(bind_text, stmt, c, s, n, None) }
+pub fn bind_text(stmt: *mut stmt, c: c_int, text: *const c_char, len: c_int, d: Destructor) -> i32 {
+    unsafe {
+        invoke_sqlite!(
+            bind_text,
+            stmt,
+            c,
+            text,
+            len,
+            match d {
+                Destructor::TRANSIENT => Some(core::mem::transmute(-1_isize)),
+                Destructor::STATIC => None,
+                Destructor::CUSTOM(f) => Some(f),
+            }
+        )
+    }
 }
 
 pub fn bind_pointer(db: *mut stmt, i: c_int, p: *mut c_void, t: *const c_char) -> i32 {
@@ -237,6 +267,11 @@ pub fn declare_vtab(db: *mut sqlite3, s: *const c_char) -> i32 {
     unsafe { invoke_sqlite!(declare_vtab, db, s) }
 }
 
+#[cfg(not(feature = "omit_load_extension"))]
+pub fn enable_load_extension(db: *mut sqlite3, onoff: c_int) -> i32 {
+    unsafe { invoke_sqlite!(enable_load_extension, db, onoff) }
+}
+
 pub fn errmsg(db: *mut sqlite3) -> CString {
     unsafe { CStr::from_ptr(invoke_sqlite!(errmsg, db)).to_owned() }
 }
@@ -249,6 +284,7 @@ pub fn finalize(stmt: *mut stmt) -> c_int {
     unsafe { invoke_sqlite!(finalize, stmt) }
 }
 
+#[inline]
 pub fn free(ptr: *mut u8) {
     unsafe { invoke_sqlite!(free, ptr as *mut c_void) }
 }
@@ -257,6 +293,17 @@ pub fn get_auxdata(context: *mut context, n: c_int) -> *mut c_void {
     unsafe { invoke_sqlite!(get_auxdata, context, n) }
 }
 
+#[cfg(not(feature = "omit_load_extension"))]
+pub fn load_extension(
+    db: *mut sqlite3,
+    zfile: *const c_char,
+    zproc: *const c_char,
+    pzerr: *mut *mut c_char,
+) -> i32 {
+    unsafe { invoke_sqlite!(load_extension, db, zfile, zproc, pzerr) }
+}
+
+#[inline]
 pub fn malloc(size: usize) -> *mut u8 {
     unsafe {
         if usize::BITS == 64 {

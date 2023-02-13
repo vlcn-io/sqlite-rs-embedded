@@ -168,7 +168,10 @@ pub trait Connection {
         destroy: Option<xDestroy>,
     ) -> Result<ResultCode, ResultCode>;
 
-    fn prepare_v2(&self, sql: &str) -> Result<ManagedStmt, ResultCode>;
+    #[cfg(not(feature = "omit_load_extension"))]
+    fn enable_load_extension(&self, enable: bool) -> Result<ResultCode, ResultCode>;
+
+    fn errmsg(&self) -> Result<String, IntoStringError>;
 
     /// sql should be a null terminated string! However you find is most efficient to craft those,
     /// hence why we have no opinion on &str vs String vs CString vs whatever
@@ -178,7 +181,14 @@ pub trait Connection {
 
     fn exec_safe(&self, sql: &str) -> Result<ResultCode, ResultCode>;
 
-    fn errmsg(&self) -> Result<String, IntoStringError>;
+    #[cfg(not(feature = "omit_load_extension"))]
+    fn load_extension(
+        &self,
+        filename: &str,
+        entrypoint: Option<&str>,
+    ) -> Result<ResultCode, ResultCode>;
+
+    fn prepare_v2(&self, sql: &str) -> Result<ManagedStmt, ResultCode>;
 }
 
 impl Connection for ManagedConnection {
@@ -223,8 +233,23 @@ impl Connection for ManagedConnection {
         self.db.exec_safe(sql)
     }
 
+    #[cfg(not(feature = "omit_load_extension"))]
+    fn enable_load_extension(&self, enable: bool) -> Result<ResultCode, ResultCode> {
+        self.db.enable_load_extension(enable)
+    }
+
+    #[inline]
     fn errmsg(&self) -> Result<String, IntoStringError> {
         self.db.errmsg()
+    }
+
+    #[cfg(not(feature = "omit_load_extension"))]
+    fn load_extension(
+        &self,
+        filename: &str,
+        entrypoint: Option<&str>,
+    ) -> Result<ResultCode, ResultCode> {
+        self.db.load_extension(filename, entrypoint)
     }
 }
 
@@ -302,6 +327,42 @@ impl Connection for *mut sqlite3 {
             convert_rc(exec(*self, sql.as_ptr()))
         } else {
             return Err(ResultCode::NOMEM);
+        }
+    }
+
+    #[cfg(not(feature = "omit_load_extension"))]
+    fn enable_load_extension(&self, enable: bool) -> Result<ResultCode, ResultCode> {
+        convert_rc(enable_load_extension(*self, if enable { 1 } else { 0 }))
+    }
+
+    #[cfg(not(feature = "omit_load_extension"))]
+    fn load_extension(
+        &self,
+        filename: &str,
+        entrypoint: Option<&str>,
+    ) -> Result<ResultCode, ResultCode> {
+        if let Ok(filename) = CString::new(filename) {
+            if let Some(entrypoint) = entrypoint {
+                if let Ok(entrypoint) = CString::new(entrypoint) {
+                    convert_rc(load_extension(
+                        *self,
+                        filename.as_ptr(),
+                        entrypoint.as_ptr(),
+                        core::ptr::null_mut(),
+                    ))
+                } else {
+                    Err(ResultCode::NOMEM)
+                }
+            } else {
+                convert_rc(load_extension(
+                    *self,
+                    filename.as_ptr(),
+                    core::ptr::null(),
+                    core::ptr::null_mut(),
+                ))
+            }
+        } else {
+            Err(ResultCode::NOMEM)
         }
     }
 
@@ -405,18 +466,29 @@ impl ManagedStmt {
         }
     }
 
+    pub fn bind_blob(&self, i: i32, val: &[u8], d: Destructor) -> Result<ResultCode, ResultCode> {
+        convert_rc(bind_blob(
+            self.stmt,
+            i,
+            val.as_ptr() as *const c_void,
+            val.len() as i32,
+            d,
+        ))
+    }
+
     #[inline]
     pub fn bind_value(&self, i: i32, val: *mut value) -> Result<ResultCode, ResultCode> {
         convert_rc(bind_value(self.stmt, i, val))
     }
 
     #[inline]
-    pub fn bind_text(&self, i: i32, text: &str) -> Result<ResultCode, ResultCode> {
+    pub fn bind_text(&self, i: i32, text: &str, d: Destructor) -> Result<ResultCode, ResultCode> {
         convert_rc(bind_text(
             self.stmt,
             i,
             text.as_ptr() as *const c_char,
             text.len() as i32,
+            d,
         ))
     }
 
