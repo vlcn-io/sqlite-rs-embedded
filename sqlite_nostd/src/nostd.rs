@@ -125,7 +125,7 @@ pub enum ResultCode {
     NULL = 5000,
 }
 
-#[derive(FromPrimitive, PartialEq)]
+#[derive(FromPrimitive, PartialEq, Debug)]
 pub enum ColumnType {
     Integer = 1,
     Float = 2,
