@@ -3,7 +3,7 @@ extern crate alloc;
 use alloc::ffi::IntoStringError;
 use alloc::vec::Vec;
 use alloc::{ffi::CString, string::String};
-use core::ffi::{c_char, c_void};
+use core::ffi::{c_char, c_int, c_void};
 
 #[cfg(not(feature = "std"))]
 use num_derive::FromPrimitive;
@@ -285,7 +285,7 @@ impl Connection for *mut sqlite3 {
                 *self,
                 name.as_ptr(),
                 n_arg,
-                flags,
+                flags as c_int,
                 user_data.unwrap_or(core::ptr::null_mut()),
                 func,
                 step,
