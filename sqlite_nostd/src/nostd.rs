@@ -188,6 +188,8 @@ pub trait Connection {
         entrypoint: Option<&str>,
     ) -> Result<ResultCode, ResultCode>;
 
+    fn next_stmt(&self, s: Option<*mut stmt>) -> Option<*mut stmt>;
+
     fn prepare_v2(&self, sql: &str) -> Result<ManagedStmt, ResultCode>;
 }
 
@@ -216,6 +218,11 @@ impl Connection for ManagedConnection {
         self.db.create_function_v2(
             name, n_arg, flags, user_data, func, step, final_func, destroy,
         )
+    }
+
+    #[inline]
+    fn next_stmt(&self, s: Option<*mut stmt>) -> Option<*mut stmt> {
+        self.db.next_stmt(s)
     }
 
     #[inline]
@@ -256,7 +263,19 @@ impl Connection for ManagedConnection {
 impl Drop for ManagedConnection {
     fn drop(&mut self) {
         // todo: iterate over all stmts and finalize them?
-        sqlite3_capi::close(self.db);
+        let rc = sqlite3_capi::close(self.db);
+        if rc != 0 {
+            // This seems aggressive...
+            // The alternative is to make users manually drop connections and manually finalize
+            // stmts :/
+            // Or we could not panic.. but then you will unknowningly have memory
+            // leaks in your app. The reason being that a failure to close the db
+            // does not release the memory of that db.
+            panic!(
+                "SQLite returned error {:?} when trying to close the db!",
+                rc
+            );
+        }
     }
 }
 
@@ -363,6 +382,22 @@ impl Connection for *mut sqlite3 {
             }
         } else {
             Err(ResultCode::NOMEM)
+        }
+    }
+
+    #[inline]
+    fn next_stmt(&self, s: Option<*mut stmt>) -> Option<*mut stmt> {
+        let s = if let Some(s) = s {
+            s
+        } else {
+            core::ptr::null_mut()
+        };
+
+        let ptr = next_stmt(*self, s);
+        if ptr.is_null() {
+            None
+        } else {
+            Some(ptr)
         }
     }
 
@@ -600,6 +635,16 @@ impl Context for *mut context {
     #[inline]
     fn db_handle(&self) -> *mut sqlite3 {
         context_db_handle(*self)
+    }
+}
+
+pub trait Stmt {
+    fn sql(&self) -> &str;
+}
+
+impl Stmt for *mut stmt {
+    fn sql(&self) -> &str {
+        unsafe { core::str::from_utf8_unchecked(core::ffi::CStr::from_ptr(sql(*self)).to_bytes()) }
     }
 }
 

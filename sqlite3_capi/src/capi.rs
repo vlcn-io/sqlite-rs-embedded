@@ -36,14 +36,15 @@ mod aliased {
         sqlite3_create_module_v2 as create_module_v2, sqlite3_declare_vtab as declare_vtab,
         sqlite3_errmsg as errmsg, sqlite3_exec as exec, sqlite3_finalize as finalize,
         sqlite3_free as free, sqlite3_get_auxdata as get_auxdata, sqlite3_malloc as malloc,
-        sqlite3_malloc64 as malloc64, sqlite3_open as open, sqlite3_prepare_v2 as prepare_v2,
-        sqlite3_reset as reset, sqlite3_result_blob as result_blob,
-        sqlite3_result_double as result_double, sqlite3_result_error as result_error,
-        sqlite3_result_error_code as result_error_code, sqlite3_result_int as result_int,
-        sqlite3_result_int64 as result_int64, sqlite3_result_null as result_null,
-        sqlite3_result_pointer as result_pointer, sqlite3_result_subtype as result_subtype,
-        sqlite3_result_text as result_text, sqlite3_result_value as result_value,
-        sqlite3_set_auxdata as set_auxdata, sqlite3_shutdown as shutdown, sqlite3_step as step,
+        sqlite3_malloc64 as malloc64, sqlite3_next_stmt as next_stmt, sqlite3_open as open,
+        sqlite3_prepare_v2 as prepare_v2, sqlite3_reset as reset,
+        sqlite3_result_blob as result_blob, sqlite3_result_double as result_double,
+        sqlite3_result_error as result_error, sqlite3_result_error_code as result_error_code,
+        sqlite3_result_int as result_int, sqlite3_result_int64 as result_int64,
+        sqlite3_result_null as result_null, sqlite3_result_pointer as result_pointer,
+        sqlite3_result_subtype as result_subtype, sqlite3_result_text as result_text,
+        sqlite3_result_value as result_value, sqlite3_set_auxdata as set_auxdata,
+        sqlite3_shutdown as shutdown, sqlite3_sql as sql, sqlite3_step as step,
         sqlite3_value_blob as value_blob, sqlite3_value_bytes as value_bytes,
         sqlite3_value_double as value_double, sqlite3_value_int as value_int,
         sqlite3_value_int64 as value_int64, sqlite3_value_pointer as value_pointer,
@@ -336,6 +337,10 @@ pub fn malloc(size: usize) -> *mut u8 {
     }
 }
 
+pub fn next_stmt(db: *mut sqlite3, s: *mut stmt) -> *mut stmt {
+    unsafe { invoke_sqlite!(next_stmt, db, s) }
+}
+
 pub fn open(filename: *const c_char, db: *mut *mut sqlite3) -> c_int {
     unsafe { invoke_sqlite!(open, filename, db) }
 }
@@ -434,6 +439,10 @@ pub fn set_auxdata(
     d: Option<unsafe extern "C" fn(*mut c_void)>,
 ) {
     unsafe { invoke_sqlite!(set_auxdata, context, n, p, d) }
+}
+
+pub fn sql(s: *mut stmt) -> *const c_char {
+    unsafe { invoke_sqlite!(sql, s) }
 }
 
 pub fn reset(stmt: *mut stmt) -> c_int {
