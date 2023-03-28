@@ -556,6 +556,7 @@ pub trait Context {
     fn result_blob_shared(&self, blob: &[u8]);
     fn result_blob_static(&self, blob: &'static [u8]);
     fn result_error(&self, text: &str);
+    fn result_error_code(&self, code: ResultCode);
     fn result_null(&self);
     fn db_handle(&self) -> *mut sqlite3;
 }
@@ -630,6 +631,11 @@ impl Context for *mut context {
     #[inline]
     fn result_error(&self, text: &str) {
         result_error(*self, text);
+    }
+
+    #[inline]
+    fn result_error_code(&self, code: ResultCode) {
+        result_error_code(*self, code as c_int);
     }
 
     #[inline]
