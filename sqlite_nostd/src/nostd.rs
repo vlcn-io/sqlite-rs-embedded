@@ -171,6 +171,7 @@ pub trait Connection {
     #[cfg(all(feature = "static", not(feature = "omit_load_extension")))]
     fn enable_load_extension(&self, enable: bool) -> Result<ResultCode, ResultCode>;
 
+    fn errcode(&self) -> ResultCode;
     fn errmsg(&self) -> Result<String, IntoStringError>;
 
     /// sql should be a null terminated string! However you find is most efficient to craft those,
@@ -248,6 +249,11 @@ impl Connection for ManagedConnection {
     #[inline]
     fn errmsg(&self) -> Result<String, IntoStringError> {
         self.db.errmsg()
+    }
+
+    #[inline]
+    fn errcode(&self) -> ResultCode {
+        self.db.errcode()
     }
 
     #[cfg(all(feature = "static", not(feature = "omit_load_extension")))]
@@ -403,6 +409,10 @@ impl Connection for *mut sqlite3 {
 
     fn errmsg(&self) -> Result<String, IntoStringError> {
         errmsg(*self).into_string()
+    }
+
+    fn errcode(&self) -> ResultCode {
+        ResultCode::from_i32(errcode(*self)).unwrap()
     }
 }
 

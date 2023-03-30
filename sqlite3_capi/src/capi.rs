@@ -34,10 +34,10 @@ mod aliased {
         sqlite3_commit_hook as commit_hook, sqlite3_context_db_handle as context_db_handle,
         sqlite3_create_function_v2 as create_function_v2,
         sqlite3_create_module_v2 as create_module_v2, sqlite3_declare_vtab as declare_vtab,
-        sqlite3_errmsg as errmsg, sqlite3_exec as exec, sqlite3_finalize as finalize,
-        sqlite3_free as free, sqlite3_get_auxdata as get_auxdata, sqlite3_malloc as malloc,
-        sqlite3_malloc64 as malloc64, sqlite3_next_stmt as next_stmt, sqlite3_open as open,
-        sqlite3_prepare_v2 as prepare_v2, sqlite3_reset as reset,
+        sqlite3_errcode as errcode, sqlite3_errmsg as errmsg, sqlite3_exec as exec,
+        sqlite3_finalize as finalize, sqlite3_free as free, sqlite3_get_auxdata as get_auxdata,
+        sqlite3_malloc as malloc, sqlite3_malloc64 as malloc64, sqlite3_next_stmt as next_stmt,
+        sqlite3_open as open, sqlite3_prepare_v2 as prepare_v2, sqlite3_reset as reset,
         sqlite3_result_blob as result_blob, sqlite3_result_double as result_double,
         sqlite3_result_error as result_error, sqlite3_result_error_code as result_error_code,
         sqlite3_result_int as result_int, sqlite3_result_int64 as result_int64,
@@ -293,6 +293,10 @@ pub fn declare_vtab(db: *mut sqlite3, s: *const c_char) -> c_int {
 #[cfg(all(feature = "static", not(feature = "omit_load_extension")))]
 pub fn enable_load_extension(db: *mut sqlite3, onoff: c_int) -> c_int {
     unsafe { crate::bindings::sqlite3_enable_load_extension(db, onoff) }
+}
+
+pub fn errcode(db: *mut sqlite3) -> c_int {
+    unsafe { invoke_sqlite!(errcode, db) }
 }
 
 pub fn errmsg(db: *mut sqlite3) -> CString {
