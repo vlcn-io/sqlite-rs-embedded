@@ -13,10 +13,6 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 
 use core::alloc::Layout;
-#[alloc_error_handler]
-fn oom(_: Layout) -> ! {
-    core::intrinsics::abort()
-}
 
 #[no_mangle]
 pub extern "C" fn __rust_alloc(size: usize, align: usize) -> *mut u8 {
