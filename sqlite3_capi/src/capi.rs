@@ -1,6 +1,5 @@
 extern crate alloc;
 
-use alloc::vec::Vec;
 use core::ffi::{c_char, c_int, c_void, CStr};
 use core::ptr;
 
