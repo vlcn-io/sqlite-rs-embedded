@@ -623,6 +623,7 @@ impl Context for *mut context {
         result_blob(*self, ptr, len as i32, Destructor::CUSTOM(droprust));
     }
 
+    /// SQLite will make a copy of the blob
     #[inline]
     fn result_blob_shared(&self, blob: &[u8]) {
         result_blob(
