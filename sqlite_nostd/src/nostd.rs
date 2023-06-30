@@ -658,11 +658,86 @@ impl Context for *mut context {
 
 pub trait Stmt {
     fn sql(&self) -> &str;
+    fn bind_blob(&self, i: i32, val: &[u8], d: Destructor) -> Result<ResultCode, ResultCode>;
+    /// Gives SQLite ownership of the blob and has SQLite free it.
+    fn bind_blob_owned(&self, i: i32, val: Vec<u8>) -> Result<ResultCode, ResultCode>;
+    fn bind_value(&self, i: i32, val: *mut value) -> Result<ResultCode, ResultCode>;
+    fn bind_text(&self, i: i32, text: &str, d: Destructor) -> Result<ResultCode, ResultCode>;
+    fn bind_text_owned(&self, i: i32, text: String) -> Result<ResultCode, ResultCode>;
+    fn bind_int64(&self, i: i32, val: i64) -> Result<ResultCode, ResultCode>;
+    fn bind_int(&self, i: i32, val: i32) -> Result<ResultCode, ResultCode>;
+    fn bind_double(&self, i: i32, val: f64) -> Result<ResultCode, ResultCode>;
 }
 
 impl Stmt for *mut stmt {
     fn sql(&self) -> &str {
         unsafe { core::str::from_utf8_unchecked(core::ffi::CStr::from_ptr(sql(*self)).to_bytes()) }
+    }
+
+    #[inline]
+    fn bind_blob(&self, i: i32, val: &[u8], d: Destructor) -> Result<ResultCode, ResultCode> {
+        convert_rc(bind_blob(
+            *self,
+            i,
+            val.as_ptr() as *const c_void,
+            val.len() as i32,
+            d,
+        ))
+    }
+
+    #[inline]
+    fn bind_blob_owned(&self, i: i32, val: Vec<u8>) -> Result<ResultCode, ResultCode> {
+        let (ptr, len, _) = val.into_raw_parts();
+        convert_rc(bind_blob(
+            *self,
+            i,
+            ptr as *const c_void,
+            len as i32,
+            Destructor::CUSTOM(droprust),
+        ))
+    }
+
+    #[inline]
+    fn bind_double(&self, i: i32, val: f64) -> Result<ResultCode, ResultCode> {
+        convert_rc(bind_double(*self, i, val))
+    }
+
+    #[inline]
+    fn bind_value(&self, i: i32, val: *mut value) -> Result<ResultCode, ResultCode> {
+        convert_rc(bind_value(*self, i, val))
+    }
+
+    #[inline]
+    fn bind_text(&self, i: i32, text: &str, d: Destructor) -> Result<ResultCode, ResultCode> {
+        convert_rc(bind_text(
+            *self,
+            i,
+            text.as_ptr() as *const c_char,
+            text.len() as i32,
+            d,
+        ))
+    }
+
+    #[inline]
+    fn bind_text_owned(&self, i: i32, text: String) -> Result<ResultCode, ResultCode> {
+        let (ptr, len, _) = text.into_raw_parts();
+        convert_rc(bind_text(
+            *self,
+            i,
+            ptr as *const c_char,
+            len as i32,
+            Destructor::CUSTOM(droprust),
+        ))
+    }
+
+    #[inline]
+    fn bind_int64(&self, i: i32, val: i64) -> Result<ResultCode, ResultCode> {
+        convert_rc(bind_int64(*self, i, val))
+    }
+
+    #[inline]
+    fn bind_int(&self, i: i32, val: i32) -> Result<ResultCode, ResultCode> {
+        convert_rc(bind_int(*self, i, val))
     }
 }
 
