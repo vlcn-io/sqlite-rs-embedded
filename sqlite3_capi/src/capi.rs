@@ -84,15 +84,7 @@ macro_rules! invoke_sqlite {
 }
 
 pub extern "C" fn droprust(ptr: *mut c_void) {
-    unsafe {
-        ptr.drop_in_place();
-    }
-}
-
-pub extern "C" fn droprust_vec(ptr: *mut c_void) {
-    unsafe {
-        Vec::from_raw_parts(ptr, 0, 0);
-    }
+    unsafe { invoke_sqlite!(free, ptr as *mut c_void) }
 }
 
 #[macro_export]

@@ -577,7 +577,8 @@ impl Context for *mut context {
         result_null(*self)
     }
 
-    /// TODO: do not use this right now! The drop is not dropping according to valgrind.
+    /// Passes ownership of the blob to SQLite without copying.
+    /// The blob must have been allocated with `sqlite3_malloc`!
     #[inline]
     fn result_text_owned(&self, text: String) {
         let (ptr, len, _) = text.into_raw_parts();
@@ -616,11 +617,11 @@ impl Context for *mut context {
     }
 
     /// Passes ownership of the blob to SQLite without copying.
-    /// SQLite will drop the blob when it is finished with it.
+    /// The blob must have been allocated with `sqlite3_malloc`!
     #[inline]
     fn result_blob_owned(&self, blob: Vec<u8>) {
         let (ptr, len, _) = blob.into_raw_parts();
-        result_blob(*self, ptr, len as i32, Destructor::CUSTOM(droprust_vec));
+        result_blob(*self, ptr, len as i32, Destructor::CUSTOM(droprust));
     }
 
     /// SQLite will make a copy of the blob
