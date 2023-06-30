@@ -620,7 +620,7 @@ impl Context for *mut context {
     #[inline]
     fn result_blob_owned(&self, blob: Vec<u8>) {
         let (ptr, len, _) = blob.into_raw_parts();
-        result_blob(*self, ptr, len as i32, Destructor::CUSTOM(droprust));
+        result_blob(*self, ptr, len as i32, Destructor::CUSTOM(droprust_vec));
     }
 
     /// SQLite will make a copy of the blob

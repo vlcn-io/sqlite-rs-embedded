@@ -1,5 +1,6 @@
 extern crate alloc;
 
+use alloc::vec::Vec;
 use core::ffi::{c_char, c_int, c_void, CStr};
 use core::ptr;
 
@@ -85,6 +86,12 @@ macro_rules! invoke_sqlite {
 pub extern "C" fn droprust(ptr: *mut c_void) {
     unsafe {
         ptr.drop_in_place();
+    }
+}
+
+pub extern "C" fn droprust_vec(ptr: *mut c_void) {
+    unsafe {
+        Vec::from_raw_parts(ptr, 0, 0);
     }
 }
 
