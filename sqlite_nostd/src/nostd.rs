@@ -667,6 +667,7 @@ pub trait Stmt {
     fn bind_int64(&self, i: i32, val: i64) -> Result<ResultCode, ResultCode>;
     fn bind_int(&self, i: i32, val: i32) -> Result<ResultCode, ResultCode>;
     fn bind_double(&self, i: i32, val: f64) -> Result<ResultCode, ResultCode>;
+    fn bind_null(&self, i: i32) -> Result<ResultCode, ResultCode>;
 }
 
 impl Stmt for *mut stmt {
@@ -738,6 +739,11 @@ impl Stmt for *mut stmt {
     #[inline]
     fn bind_int(&self, i: i32, val: i32) -> Result<ResultCode, ResultCode> {
         convert_rc(bind_int(*self, i, val))
+    }
+
+    #[inline]
+    fn bind_null(&self, i: i32) -> Result<ResultCode, ResultCode> {
+        convert_rc(bind_null(*self, i))
     }
 }
 

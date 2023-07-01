@@ -146,6 +146,10 @@ pub fn bind_double(stmt: *mut stmt, c: c_int, f: f64) -> c_int {
     unsafe { invoke_sqlite!(bind_double, stmt, c, f) }
 }
 
+pub fn bind_null(stmt: *mut stmt, c: c_int) -> c_int {
+    unsafe { invoke_sqlite!(bind_null, stmt, c) }
+}
+
 pub fn bind_text(
     stmt: *mut stmt,
     c: c_int,
