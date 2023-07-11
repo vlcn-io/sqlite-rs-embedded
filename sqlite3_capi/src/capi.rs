@@ -9,7 +9,8 @@ use alloc::ffi::CString;
 pub use crate::bindings::{
     sqlite3, sqlite3_api_routines as api_routines, sqlite3_context as context,
     sqlite3_index_info as index_info, sqlite3_module as module, sqlite3_stmt as stmt,
-    sqlite3_uint64 as uint64, sqlite3_value as value, sqlite_int64 as int64,
+    sqlite3_uint64 as uint64, sqlite3_value as value, sqlite3_vtab as vtab,
+    sqlite3_vtab_cursor as vtab_cursor, sqlite_int64 as int64,
     SQLITE_DETERMINISTIC as DETERMINISTIC, SQLITE_DIRECTONLY as DIRECTONLY,
     SQLITE_INNOCUOUS as INNOCUOUS, SQLITE_UTF8 as UTF8,
 };
@@ -318,8 +319,8 @@ pub fn finalize(stmt: *mut stmt) -> c_int {
 }
 
 #[inline]
-pub fn free(ptr: *mut u8) {
-    unsafe { invoke_sqlite!(free, ptr as *mut c_void) }
+pub fn free(ptr: *mut c_void) {
+    unsafe { invoke_sqlite!(free, ptr) }
 }
 
 pub fn get_auxdata(context: *mut context, n: c_int) -> *mut c_void {

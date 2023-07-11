@@ -168,6 +168,14 @@ pub trait Connection {
         destroy: Option<xDestroy>,
     ) -> Result<ResultCode, ResultCode>;
 
+    fn create_module_v2(
+        &self,
+        name: &str,
+        module: *const module,
+        user_data: Option<*mut c_void>,
+        destroy: Option<xDestroy>,
+    ) -> Result<ResultCode, ResultCode>;
+
     #[cfg(all(feature = "static", not(feature = "omit_load_extension")))]
     fn enable_load_extension(&self, enable: bool) -> Result<ResultCode, ResultCode>;
 
@@ -219,6 +227,16 @@ impl Connection for ManagedConnection {
         self.db.create_function_v2(
             name, n_arg, flags, user_data, func, step, final_func, destroy,
         )
+    }
+
+    fn create_module_v2(
+        &self,
+        name: &str,
+        module: *const module,
+        user_data: Option<*mut c_void>,
+        destroy: Option<xDestroy>,
+    ) -> Result<ResultCode, ResultCode> {
+        self.db.create_module_v2(name, module, user_data, destroy)
     }
 
     #[inline]
@@ -315,6 +333,26 @@ impl Connection for *mut sqlite3 {
                 func,
                 step,
                 final_func,
+                destroy,
+            ))
+        } else {
+            Err(ResultCode::NOMEM)
+        }
+    }
+
+    fn create_module_v2(
+        &self,
+        name: &str,
+        module: *const module,
+        user_data: Option<*mut c_void>,
+        destroy: Option<xDestroy>,
+    ) -> Result<ResultCode, ResultCode> {
+        if let Ok(name) = CString::new(name) {
+            convert_rc(create_module_v2(
+                *self,
+                name.as_ptr(),
+                module,
+                user_data.unwrap_or(core::ptr::null_mut()),
                 destroy,
             ))
         } else {
