@@ -51,9 +51,8 @@ mod aliased {
         sqlite3_value_int64 as value_int64, sqlite3_value_pointer as value_pointer,
         sqlite3_value_subtype as value_subtype, sqlite3_value_text as value_text,
         sqlite3_value_type as value_type, sqlite3_vtab_collation as vtab_collation,
-        sqlite3_vtab_config as vtab_config, sqlite3_vtab_config as vtab_config,
-        sqlite3_vtab_distinct as vtab_distinct, sqlite3_vtab_nochange as vtab_nochange,
-        sqlite3_vtab_on_conflict as vtab_on_conflict,
+        sqlite3_vtab_config as vtab_config, sqlite3_vtab_distinct as vtab_distinct,
+        sqlite3_vtab_nochange as vtab_nochange, sqlite3_vtab_on_conflict as vtab_on_conflict,
     };
 }
 
