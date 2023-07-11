@@ -601,7 +601,7 @@ pub trait Context {
     fn result_text_transient(&self, text: &str);
     fn result_text_static(&self, text: &str);
     fn result_blob_owned(&self, blob: Vec<u8>);
-    fn result_blob_shared(&self, blob: &[u8]);
+    fn result_blob_transient(&self, blob: &[u8]);
     fn result_blob_static(&self, blob: &[u8]);
     fn result_error(&self, text: &str);
     fn result_error_code(&self, code: ResultCode);
@@ -666,9 +666,8 @@ impl Context for *mut context {
     }
 
     /// SQLite will make a copy of the blob
-    /// TODO: rename `shared` to `TRANSIENT`!!!
     #[inline]
-    fn result_blob_shared(&self, blob: &[u8]) {
+    fn result_blob_transient(&self, blob: &[u8]) {
         result_blob(
             *self,
             blob.as_ptr(),
