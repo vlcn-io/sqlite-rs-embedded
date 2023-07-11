@@ -599,12 +599,15 @@ pub trait Context {
     /// using it.
     fn result_text_owned(&self, text: String);
     fn result_text_transient(&self, text: &str);
-    fn result_text_static(&self, text: &'static str);
+    fn result_text_static(&self, text: &str);
     fn result_blob_owned(&self, blob: Vec<u8>);
     fn result_blob_shared(&self, blob: &[u8]);
-    fn result_blob_static(&self, blob: &'static [u8]);
+    fn result_blob_static(&self, blob: &[u8]);
     fn result_error(&self, text: &str);
     fn result_error_code(&self, code: ResultCode);
+    fn result_value(&self, value: *mut value);
+    fn result_double(&self, value: f64);
+    fn result_int64(&self, value: i64);
     fn result_null(&self);
     fn db_handle(&self) -> *mut sqlite3;
 }
@@ -642,10 +645,10 @@ impl Context for *mut context {
         );
     }
 
-    /// Takes a reference to a string that is statically allocated.
+    /// Takes a reference to a string that will outlive SQLite's use of the string.
     /// SQLite will not copy this string.
     #[inline]
-    fn result_text_static(&self, text: &'static str) {
+    fn result_text_static(&self, text: &str) {
         result_text(
             *self,
             text.as_ptr() as *mut c_char,
@@ -663,6 +666,7 @@ impl Context for *mut context {
     }
 
     /// SQLite will make a copy of the blob
+    /// TODO: rename `shared` to `TRANSIENT`!!!
     #[inline]
     fn result_blob_shared(&self, blob: &[u8]) {
         result_blob(
@@ -674,7 +678,7 @@ impl Context for *mut context {
     }
 
     #[inline]
-    fn result_blob_static(&self, blob: &'static [u8]) {
+    fn result_blob_static(&self, blob: &[u8]) {
         result_blob(*self, blob.as_ptr(), blob.len() as i32, Destructor::STATIC);
     }
 
@@ -686,6 +690,21 @@ impl Context for *mut context {
     #[inline]
     fn result_error_code(&self, code: ResultCode) {
         result_error_code(*self, code as c_int);
+    }
+
+    #[inline]
+    fn result_value(&self, value: *mut value) {
+        result_value(*self, value);
+    }
+
+    #[inline]
+    fn result_double(&self, value: f64) {
+        result_double(*self, value);
+    }
+
+    #[inline]
+    fn result_int64(&self, value: i64) {
+        result_int64(*self, value);
     }
 
     #[inline]

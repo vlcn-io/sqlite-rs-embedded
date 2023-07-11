@@ -8,10 +8,12 @@ use alloc::ffi::CString;
 
 pub use crate::bindings::{
     sqlite3, sqlite3_api_routines as api_routines, sqlite3_context as context,
-    sqlite3_index_info as index_info, sqlite3_module as module, sqlite3_stmt as stmt,
-    sqlite3_uint64 as uint64, sqlite3_value as value, sqlite3_vtab as vtab,
-    sqlite3_vtab_cursor as vtab_cursor, sqlite_int64 as int64,
-    SQLITE_DETERMINISTIC as DETERMINISTIC, SQLITE_DIRECTONLY as DIRECTONLY,
+    sqlite3_index_info as index_info,
+    sqlite3_index_info_sqlite3_index_constraint as index_constraint,
+    sqlite3_index_info_sqlite3_index_constraint_usage as index_constraint_usage,
+    sqlite3_module as module, sqlite3_stmt as stmt, sqlite3_uint64 as uint64,
+    sqlite3_value as value, sqlite3_vtab as vtab, sqlite3_vtab_cursor as vtab_cursor,
+    sqlite_int64 as int64, SQLITE_DETERMINISTIC as DETERMINISTIC, SQLITE_DIRECTONLY as DIRECTONLY,
     SQLITE_INNOCUOUS as INNOCUOUS, SQLITE_UTF8 as UTF8,
 };
 
@@ -423,6 +425,10 @@ pub fn result_error(context: *mut context, text: &str) {
 
 pub fn result_error_code(context: *mut context, code: c_int) {
     unsafe { invoke_sqlite!(result_error_code, context, code) }
+}
+
+pub fn result_value(ctx: *mut context, v: *mut value) {
+    unsafe { invoke_sqlite!(result_value, ctx, v) }
 }
 
 // d is our destructor function.
