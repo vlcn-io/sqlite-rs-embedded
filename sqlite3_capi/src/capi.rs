@@ -51,8 +51,9 @@ mod aliased {
         sqlite3_value_int64 as value_int64, sqlite3_value_pointer as value_pointer,
         sqlite3_value_subtype as value_subtype, sqlite3_value_text as value_text,
         sqlite3_value_type as value_type, sqlite3_vtab_collation as vtab_collation,
-        sqlite3_vtab_config as vtab_config, sqlite3_vtab_distinct as vtab_distinct,
-        sqlite3_vtab_nochange as vtab_nochange, sqlite3_vtab_on_conflict as vtab_on_conflict,
+        sqlite3_vtab_config as vtab_config, sqlite3_vtab_config as vtab_config,
+        sqlite3_vtab_distinct as vtab_distinct, sqlite3_vtab_nochange as vtab_nochange,
+        sqlite3_vtab_on_conflict as vtab_on_conflict,
     };
 }
 
@@ -174,8 +175,8 @@ pub fn bind_text(
     }
 }
 
-pub fn bind_pointer(db: *mut stmt, i: c_int, p: *mut c_void, t: *const c_char) -> c_int {
-    unsafe { invoke_sqlite!(bind_pointer, db, i, p, t, None) }
+pub fn bind_pointer(stmt: *mut stmt, i: c_int, p: *mut c_void, t: *const c_char) -> c_int {
+    unsafe { invoke_sqlite!(bind_pointer, stmt, i, p, t, None) }
 }
 
 pub fn bind_value(stmt: *mut stmt, c: c_int, v: *mut value) -> c_int {
@@ -184,6 +185,10 @@ pub fn bind_value(stmt: *mut stmt, c: c_int, v: *mut value) -> c_int {
 
 pub fn close(db: *mut sqlite3) -> c_int {
     unsafe { invoke_sqlite!(close, db) }
+}
+
+pub fn vtab_config(db: *mut sqlite3, options: u32) -> c_int {
+    unsafe { invoke_sqlite!(vtab_config, db, options as i32) }
 }
 
 pub type xCommitHook = unsafe extern "C" fn(*mut c_void) -> c_int;
