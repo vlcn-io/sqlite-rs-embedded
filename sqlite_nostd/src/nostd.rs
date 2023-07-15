@@ -4,6 +4,7 @@ use alloc::ffi::IntoStringError;
 use alloc::vec::Vec;
 use alloc::{ffi::CString, string::String};
 use core::ffi::{c_char, c_int, c_void};
+use core::{error::Error, str::Utf8Error};
 
 #[cfg(not(feature = "std"))]
 use num_derive::FromPrimitive;
@@ -123,6 +124,20 @@ pub enum ResultCode {
     OK_SYMLINK = bindings::SQLITE_OK_SYMLINK as isize,
 
     NULL = 5000,
+}
+
+impl core::fmt::Display for ResultCode {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl Error for ResultCode {}
+
+impl From<Utf8Error> for ResultCode {
+    fn from(error: Utf8Error) -> Self {
+        ResultCode::FORMAT
+    }
 }
 
 #[derive(FromPrimitive, PartialEq, Debug)]
