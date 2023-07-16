@@ -135,7 +135,7 @@ impl core::fmt::Display for ResultCode {
 impl Error for ResultCode {}
 
 impl From<Utf8Error> for ResultCode {
-    fn from(error: Utf8Error) -> Self {
+    fn from(_error: Utf8Error) -> Self {
         ResultCode::FORMAT
     }
 }
