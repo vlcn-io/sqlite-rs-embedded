@@ -3,6 +3,7 @@ extern crate alloc;
 use alloc::ffi::IntoStringError;
 use alloc::vec::Vec;
 use alloc::{ffi::CString, string::String};
+use core::array::TryFromSliceError;
 use core::ffi::{c_char, c_int, c_void};
 use core::{error::Error, str::Utf8Error};
 
@@ -137,6 +138,12 @@ impl Error for ResultCode {}
 impl From<Utf8Error> for ResultCode {
     fn from(_error: Utf8Error) -> Self {
         ResultCode::FORMAT
+    }
+}
+
+impl From<TryFromSliceError> for ResultCode {
+    fn from(_error: TryFromSliceError) -> Self {
+        ResultCode::RANGE
     }
 }
 
