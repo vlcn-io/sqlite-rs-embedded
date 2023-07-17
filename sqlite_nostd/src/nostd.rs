@@ -160,6 +160,10 @@ pub fn open(filename: *const c_char) -> Result<ManagedConnection, ResultCode> {
     }
 }
 
+pub fn randomness(blob: &mut [u8]) {
+    sqlite3_capi::randomness(blob.len() as c_int, blob.as_mut_ptr() as *mut c_void)
+}
+
 pub struct ManagedConnection {
     db: *mut sqlite3,
 }
