@@ -636,6 +636,7 @@ pub trait Context {
     fn result_int64(&self, value: i64);
     fn result_null(&self);
     fn db_handle(&self) -> *mut sqlite3;
+    fn user_data(&self) -> *mut c_void;
 }
 
 impl Context for *mut context {
@@ -735,6 +736,11 @@ impl Context for *mut context {
     #[inline]
     fn db_handle(&self) -> *mut sqlite3 {
         context_db_handle(*self)
+    }
+
+    #[inline]
+    fn user_data(&self) -> *mut c_void {
+        user_data(*self)
     }
 }
 

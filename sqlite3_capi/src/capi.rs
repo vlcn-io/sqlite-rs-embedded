@@ -48,13 +48,14 @@ mod aliased {
         sqlite3_result_pointer as result_pointer, sqlite3_result_subtype as result_subtype,
         sqlite3_result_text as result_text, sqlite3_result_value as result_value,
         sqlite3_set_auxdata as set_auxdata, sqlite3_shutdown as shutdown, sqlite3_sql as sql,
-        sqlite3_step as step, sqlite3_value_blob as value_blob, sqlite3_value_bytes as value_bytes,
-        sqlite3_value_double as value_double, sqlite3_value_int as value_int,
-        sqlite3_value_int64 as value_int64, sqlite3_value_pointer as value_pointer,
-        sqlite3_value_subtype as value_subtype, sqlite3_value_text as value_text,
-        sqlite3_value_type as value_type, sqlite3_vtab_collation as vtab_collation,
-        sqlite3_vtab_config as vtab_config, sqlite3_vtab_distinct as vtab_distinct,
-        sqlite3_vtab_nochange as vtab_nochange, sqlite3_vtab_on_conflict as vtab_on_conflict,
+        sqlite3_step as step, sqlite3_user_data as user_data, sqlite3_value_blob as value_blob,
+        sqlite3_value_bytes as value_bytes, sqlite3_value_double as value_double,
+        sqlite3_value_int as value_int, sqlite3_value_int64 as value_int64,
+        sqlite3_value_pointer as value_pointer, sqlite3_value_subtype as value_subtype,
+        sqlite3_value_text as value_text, sqlite3_value_type as value_type,
+        sqlite3_vtab_collation as vtab_collation, sqlite3_vtab_config as vtab_config,
+        sqlite3_vtab_distinct as vtab_distinct, sqlite3_vtab_nochange as vtab_nochange,
+        sqlite3_vtab_on_conflict as vtab_on_conflict,
     };
 }
 
@@ -474,8 +475,14 @@ pub fn reset(stmt: *mut stmt) -> c_int {
     unsafe { invoke_sqlite!(reset, stmt) }
 }
 
+#[inline]
 pub fn step(stmt: *mut stmt) -> c_int {
     unsafe { invoke_sqlite!(step, stmt) }
+}
+
+#[inline]
+pub fn user_data(ctx: *mut context) -> *mut c_void {
+    unsafe { invoke_sqlite!(user_data, ctx) }
 }
 
 pub fn value_text<'a>(arg1: *mut value) -> &'a str {
