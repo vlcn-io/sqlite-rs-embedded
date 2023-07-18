@@ -756,6 +756,14 @@ pub trait Stmt {
     fn bind_int(&self, i: i32, val: i32) -> Result<ResultCode, ResultCode>;
     fn bind_double(&self, i: i32, val: f64) -> Result<ResultCode, ResultCode>;
     fn bind_null(&self, i: i32) -> Result<ResultCode, ResultCode>;
+
+    fn column_value(&self, i: i32) -> *mut value;
+    fn column_int64(&self, i: i32) -> int64;
+    fn column_int(&self, i: i32) -> i32;
+    fn column_blob(&self, i: i32) -> &[u8];
+    fn column_double(&self, i: i32) -> f64;
+    fn column_text(&self, i: i32) -> &str;
+    fn column_bytes(&self, i: i32) -> i32;
 }
 
 impl Stmt for *mut stmt {
@@ -832,6 +840,43 @@ impl Stmt for *mut stmt {
     #[inline]
     fn bind_null(&self, i: i32) -> Result<ResultCode, ResultCode> {
         convert_rc(bind_null(*self, i))
+    }
+
+    #[inline]
+    fn column_value(&self, i: i32) -> *mut value {
+        column_value(*self, i)
+    }
+
+    #[inline]
+    fn column_int64(&self, i: i32) -> int64 {
+        column_int64(*self, i)
+    }
+
+    #[inline]
+    fn column_int(&self, i: i32) -> i32 {
+        column_int(*self, i)
+    }
+
+    #[inline]
+    fn column_blob(&self, i: i32) -> &[u8] {
+        let len = column_bytes(*self, i);
+        let ptr = column_blob(*self, i);
+        unsafe { core::slice::from_raw_parts(ptr as *const u8, len as usize) }
+    }
+
+    #[inline]
+    fn column_double(&self, i: i32) -> f64 {
+        column_double(*self, i)
+    }
+
+    #[inline]
+    fn column_text(&self, i: i32) -> &str {
+        column_text(*self, i)
+    }
+
+    #[inline]
+    fn column_bytes(&self, i: i32) -> i32 {
+        column_bytes(*self, i)
     }
 }
 
