@@ -764,6 +764,10 @@ pub trait Stmt {
     fn column_double(&self, i: i32) -> f64;
     fn column_text(&self, i: i32) -> &str;
     fn column_bytes(&self, i: i32) -> i32;
+
+    fn finalize(&self) -> Result<ResultCode, ResultCode>;
+
+    fn step(&self) -> Result<ResultCode, ResultCode>;
 }
 
 impl Stmt for *mut stmt {
@@ -877,6 +881,25 @@ impl Stmt for *mut stmt {
     #[inline]
     fn column_bytes(&self, i: i32) -> i32 {
         column_bytes(*self, i)
+    }
+
+    #[inline]
+    fn step(&self) -> Result<ResultCode, ResultCode> {
+        match ResultCode::from_i32(step(*self)) {
+            Some(ResultCode::ROW) => Ok(ResultCode::ROW),
+            Some(ResultCode::DONE) => Ok(ResultCode::DONE),
+            Some(rc) => Err(rc),
+            None => Err(ResultCode::ERROR),
+        }
+    }
+
+    #[inline]
+    fn finalize(&self) -> Result<ResultCode, ResultCode> {
+        match ResultCode::from_i32(finalize(*self)) {
+            Some(ResultCode::OK) => Ok(ResultCode::OK),
+            Some(rc) => Err(rc),
+            None => Err(ResultCode::ABORT),
+        }
     }
 }
 
