@@ -1,6 +1,6 @@
 extern crate alloc;
 
-use core::ffi::{c_char, c_int, c_void, CStr};
+use core::ffi::{c_char, c_int, c_uint, c_void, CStr};
 use core::ptr;
 
 use alloc::borrow::ToOwned;
@@ -14,7 +14,9 @@ pub use crate::bindings::{
     sqlite3_module as module, sqlite3_stmt as stmt, sqlite3_uint64 as uint64,
     sqlite3_value as value, sqlite3_vtab as vtab, sqlite3_vtab_cursor as vtab_cursor,
     sqlite_int64 as int64, SQLITE_DETERMINISTIC as DETERMINISTIC, SQLITE_DIRECTONLY as DIRECTONLY,
-    SQLITE_INNOCUOUS as INNOCUOUS, SQLITE_UTF8 as UTF8,
+    SQLITE_INNOCUOUS as INNOCUOUS, SQLITE_PREPARE_NORMALIZE as PREPARE_NORMALIZE,
+    SQLITE_PREPARE_NO_VTAB as PREPARE_NO_VTAB, SQLITE_PREPARE_PERSISTENT as PREPARE_PERSISTENT,
+    SQLITE_UTF8 as UTF8,
 };
 
 mod aliased {
@@ -40,15 +42,16 @@ mod aliased {
         sqlite3_errcode as errcode, sqlite3_errmsg as errmsg, sqlite3_exec as exec,
         sqlite3_finalize as finalize, sqlite3_free as free, sqlite3_get_auxdata as get_auxdata,
         sqlite3_malloc as malloc, sqlite3_malloc64 as malloc64, sqlite3_next_stmt as next_stmt,
-        sqlite3_open as open, sqlite3_prepare_v2 as prepare_v2, sqlite3_randomness as randomness,
-        sqlite3_reset as reset, sqlite3_result_blob as result_blob,
-        sqlite3_result_double as result_double, sqlite3_result_error as result_error,
-        sqlite3_result_error_code as result_error_code, sqlite3_result_int as result_int,
-        sqlite3_result_int64 as result_int64, sqlite3_result_null as result_null,
-        sqlite3_result_pointer as result_pointer, sqlite3_result_subtype as result_subtype,
-        sqlite3_result_text as result_text, sqlite3_result_value as result_value,
-        sqlite3_set_auxdata as set_auxdata, sqlite3_shutdown as shutdown, sqlite3_sql as sql,
-        sqlite3_step as step, sqlite3_user_data as user_data, sqlite3_value_blob as value_blob,
+        sqlite3_open as open, sqlite3_prepare_v2 as prepare_v2, sqlite3_prepare_v3 as prepare_v3,
+        sqlite3_randomness as randomness, sqlite3_reset as reset,
+        sqlite3_result_blob as result_blob, sqlite3_result_double as result_double,
+        sqlite3_result_error as result_error, sqlite3_result_error_code as result_error_code,
+        sqlite3_result_int as result_int, sqlite3_result_int64 as result_int64,
+        sqlite3_result_null as result_null, sqlite3_result_pointer as result_pointer,
+        sqlite3_result_subtype as result_subtype, sqlite3_result_text as result_text,
+        sqlite3_result_value as result_value, sqlite3_set_auxdata as set_auxdata,
+        sqlite3_shutdown as shutdown, sqlite3_sql as sql, sqlite3_step as step,
+        sqlite3_user_data as user_data, sqlite3_value_blob as value_blob,
         sqlite3_value_bytes as value_bytes, sqlite3_value_double as value_double,
         sqlite3_value_int as value_int, sqlite3_value_int64 as value_int64,
         sqlite3_value_pointer as value_pointer, sqlite3_value_subtype as value_subtype,
@@ -371,6 +374,17 @@ pub fn prepare_v2(
     leftover: *mut *const c_char,
 ) -> c_int {
     unsafe { invoke_sqlite!(prepare_v2, db, sql, n, stmt, leftover) }
+}
+
+pub fn prepare_v3(
+    db: *mut sqlite3,
+    sql: *const c_char,
+    n: c_int,
+    flags: c_uint,
+    stmt: *mut *mut stmt,
+    leftover: *mut *const c_char,
+) -> c_int {
+    unsafe { invoke_sqlite!(prepare_v3, db, sql, n, flags, stmt, leftover) }
 }
 
 pub fn randomness(len: c_int, blob: *mut c_void) {

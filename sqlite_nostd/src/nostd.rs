@@ -1,6 +1,6 @@
 extern crate alloc;
 
-use alloc::ffi::IntoStringError;
+use alloc::ffi::{IntoStringError, NulError};
 use alloc::vec::Vec;
 use alloc::{ffi::CString, string::String};
 use core::array::TryFromSliceError;
@@ -147,6 +147,12 @@ impl From<TryFromSliceError> for ResultCode {
     }
 }
 
+impl From<NulError> for ResultCode {
+    fn from(_error: NulError) -> Self {
+        ResultCode::NOMEM
+    }
+}
+
 #[derive(FromPrimitive, PartialEq, Debug)]
 pub enum ColumnType {
     Integer = 1,
@@ -226,6 +232,8 @@ pub trait Connection {
     fn next_stmt(&self, s: Option<*mut stmt>) -> Option<*mut stmt>;
 
     fn prepare_v2(&self, sql: &str) -> Result<ManagedStmt, ResultCode>;
+
+    fn prepare_v3(&self, sql: &str, flags: u32) -> Result<ManagedStmt, ResultCode>;
 }
 
 impl Connection for ManagedConnection {
@@ -273,6 +281,11 @@ impl Connection for ManagedConnection {
     #[inline]
     fn prepare_v2(&self, sql: &str) -> Result<ManagedStmt, ResultCode> {
         self.db.prepare_v2(sql)
+    }
+
+    #[inline]
+    fn prepare_v3(&self, sql: &str, flags: u32) -> Result<ManagedStmt, ResultCode> {
+        self.db.prepare_v3(sql, flags)
     }
 
     #[inline]
@@ -406,6 +419,26 @@ impl Connection for *mut sqlite3 {
     }
 
     #[inline]
+    fn prepare_v3(&self, sql: &str, flags: u32) -> Result<ManagedStmt, ResultCode> {
+        let mut stmt = core::ptr::null_mut();
+        let mut tail = core::ptr::null();
+        let rc = ResultCode::from_i32(prepare_v3(
+            *self,
+            sql.as_ptr() as *const c_char,
+            sql.len() as i32,
+            flags,
+            &mut stmt as *mut *mut stmt,
+            &mut tail as *mut *const c_char,
+        ))
+        .unwrap();
+        if rc == ResultCode::OK {
+            Ok(ManagedStmt { stmt: stmt })
+        } else {
+            Err(rc)
+        }
+    }
+
+    #[inline]
     unsafe fn exec(&self, sql: *const c_char) -> Result<ResultCode, ResultCode> {
         convert_rc(exec(*self, sql))
     }
@@ -490,7 +523,7 @@ fn convert_rc(rc: i32) -> Result<ResultCode, ResultCode> {
 }
 
 pub struct ManagedStmt {
-    stmt: *mut stmt,
+    pub stmt: *mut stmt,
 }
 
 impl ManagedStmt {
