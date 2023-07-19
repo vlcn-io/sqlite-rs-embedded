@@ -800,6 +800,7 @@ pub trait Stmt {
 
     fn finalize(&self) -> Result<ResultCode, ResultCode>;
 
+    fn reset(&self) -> Result<ResultCode, ResultCode>;
     fn step(&self) -> Result<ResultCode, ResultCode>;
 }
 
@@ -914,6 +915,11 @@ impl Stmt for *mut stmt {
     #[inline]
     fn column_bytes(&self, i: i32) -> i32 {
         column_bytes(*self, i)
+    }
+
+    #[inline]
+    fn reset(&self) -> Result<ResultCode, ResultCode> {
+        convert_rc(reset(*self))
     }
 
     #[inline]
