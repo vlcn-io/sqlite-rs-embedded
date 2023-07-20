@@ -790,6 +790,8 @@ pub trait Stmt {
     fn bind_double(&self, i: i32, val: f64) -> Result<ResultCode, ResultCode>;
     fn bind_null(&self, i: i32) -> Result<ResultCode, ResultCode>;
 
+    fn clear_bindings(&self) -> Result<ResultCode, ResultCode>;
+
     fn column_value(&self, i: i32) -> *mut value;
     fn column_int64(&self, i: i32) -> int64;
     fn column_int(&self, i: i32) -> i32;
@@ -878,6 +880,11 @@ impl Stmt for *mut stmt {
     #[inline]
     fn bind_null(&self, i: i32) -> Result<ResultCode, ResultCode> {
         convert_rc(bind_null(*self, i))
+    }
+
+    #[inline]
+    fn clear_bindings(&self) -> Result<ResultCode, ResultCode> {
+        convert_rc(clear_bindings(*self))
     }
 
     #[inline]

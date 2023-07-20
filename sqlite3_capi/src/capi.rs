@@ -41,12 +41,12 @@ mod aliased {
         sqlite3_bind_parameter_index as bind_parameter_index,
         sqlite3_bind_parameter_name as bind_parameter_name, sqlite3_bind_pointer as bind_pointer,
         sqlite3_bind_text as bind_text, sqlite3_bind_value as bind_value,
-        sqlite3_bind_zeroblob as bind_zeroblob, sqlite3_close as close,
-        sqlite3_column_blob as column_blob, sqlite3_column_bytes as column_bytes,
-        sqlite3_column_count as column_count, sqlite3_column_decltype as column_decltype,
-        sqlite3_column_double as column_double, sqlite3_column_int as column_int,
-        sqlite3_column_int64 as column_int64, sqlite3_column_name as column_name,
-        sqlite3_column_origin_name as column_origin_name,
+        sqlite3_bind_zeroblob as bind_zeroblob, sqlite3_clear_bindings as clear_bindings,
+        sqlite3_close as close, sqlite3_column_blob as column_blob,
+        sqlite3_column_bytes as column_bytes, sqlite3_column_count as column_count,
+        sqlite3_column_decltype as column_decltype, sqlite3_column_double as column_double,
+        sqlite3_column_int as column_int, sqlite3_column_int64 as column_int64,
+        sqlite3_column_name as column_name, sqlite3_column_origin_name as column_origin_name,
         sqlite3_column_table_name as column_table_name, sqlite3_column_text as column_text,
         sqlite3_column_type as column_type, sqlite3_column_value as column_value,
         sqlite3_commit_hook as commit_hook, sqlite3_context_db_handle as context_db_handle,
@@ -175,6 +175,10 @@ pub fn bind_double(stmt: *mut stmt, c: c_int, f: f64) -> c_int {
 
 pub fn bind_null(stmt: *mut stmt, c: c_int) -> c_int {
     unsafe { invoke_sqlite!(bind_null, stmt, c) }
+}
+
+pub fn clear_bindings(stmt: *mut stmt) -> c_int {
+    unsafe { invoke_sqlite!(clear_bindings, stmt) }
 }
 
 pub fn bind_text(
