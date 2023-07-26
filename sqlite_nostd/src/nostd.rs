@@ -643,6 +643,11 @@ impl ManagedStmt {
     pub fn bind_int(&self, i: i32, val: i32) -> Result<ResultCode, ResultCode> {
         convert_rc(bind_int(self.stmt, i, val))
     }
+
+    #[inline]
+    pub fn clear_bindings(&self) -> Result<ResultCode, ResultCode> {
+        convert_rc(clear_bindings(self.stmt))
+    }
 }
 
 impl Drop for ManagedStmt {
