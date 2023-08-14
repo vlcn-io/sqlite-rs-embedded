@@ -516,8 +516,8 @@ impl Connection for *mut sqlite3 {
     }
 }
 
-fn convert_rc(rc: i32) -> Result<ResultCode, ResultCode> {
-    let rc = ResultCode::from_i32(rc).unwrap();
+pub fn convert_rc(rc: i32) -> Result<ResultCode, ResultCode> {
+    let rc = ResultCode::from_i32(rc).unwrap_or(ResultCode::ABORT);
     if rc == ResultCode::OK {
         Ok(rc)
     } else {
