@@ -1144,6 +1144,11 @@ pub fn declare_vtab(db: *mut sqlite3, def: &str) -> Result<ResultCode, ResultCod
     convert_rc(ret)
 }
 
+pub fn vtab_config(db: *mut sqlite3, options: u32) -> Result<ResultCode, ResultCode> {
+    let rc = sqlite3_capi::vtab_config(db, options);
+    convert_rc(rc)
+}
+
 // type xCreateC = extern "C" fn(
 //     *mut sqlite3,
 //     *mut c_void,
