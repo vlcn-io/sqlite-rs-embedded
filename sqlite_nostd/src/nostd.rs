@@ -1,11 +1,13 @@
 extern crate alloc;
 
 use alloc::ffi::{IntoStringError, NulError};
+use alloc::string::ToString;
 use alloc::vec::Vec;
 use alloc::{ffi::CString, string::String};
 use core::array::TryFromSliceError;
-use core::ffi::{c_char, c_int, c_void};
-use core::{error::Error, str::Utf8Error};
+use core::ffi::{c_char, c_int, c_void, CStr};
+use core::ptr::null_mut;
+use core::{error::Error, slice, str::Utf8Error};
 
 #[cfg(not(feature = "std"))]
 use num_derive::FromPrimitive;
@@ -1000,3 +1002,137 @@ impl Value for *mut value {
         value_bytes(*self)
     }
 }
+
+pub trait pzErrMsg {
+    fn set(&self, val: &str);
+}
+
+impl pzErrMsg for *mut *mut c_char {
+    /**
+     * Sets the error message, copying the contents of `val`.
+     * If the error has already been set, future calls to `set` are ignored.
+     */
+    fn set(&self, val: &str) {
+        unsafe {
+            if **self != null_mut() {
+                return;
+            }
+            if let Ok(cstring) = CString::new(val) {
+                **self = cstring.into_raw();
+            } else {
+                if let Ok(s) = CString::new("Failed setting error message.") {
+                    **self = s.into_raw();
+                }
+            }
+        }
+    }
+}
+
+pub trait VTab {
+    fn set_err(&self, val: &str);
+}
+
+impl VTab for *mut vtab {
+    /**
+     * Sets the error message, copying the contents of `val`.
+     * If the error has already been set, future calls to `set` are ignored.
+     */
+    fn set_err(&self, val: &str) {
+        unsafe {
+            if (**self).zErrMsg != null_mut() {
+                return;
+            }
+            if let Ok(e) = CString::new(val) {
+                (**self).zErrMsg = e.into_raw();
+            }
+        }
+    }
+}
+
+// from: https://github.com/asg017/sqlite-loadable-rs/blob/main/src/table.rs#L722
+pub struct VTabArgs<'a> {
+    /// Name of the module being invoked, the argument in the USING clause.
+    /// Example: `"CREATE VIRTUAL TABLE xxx USING custom_vtab"` would have
+    /// a `module_name` of `"custom_vtab"`.
+    /// Sourced from `argv[0]`
+    pub module_name: &'a str,
+    /// Name of the database where the virtual table will be created,
+    /// typically `"main"` or `"temp"` or another name from an
+    /// [`ATTACH`'ed database](https://www.sqlite.org/lang_attach.html).
+    /// Sourced from `argv[1]`
+    pub database_name: &'a str,
+
+    /// Name of the table being created.
+    /// Example: `"CREATE VIRTUAL TABLE xxx USING custom_vtab"` would
+    /// have a `table_name` of `"xxx"`.
+    /// Sourced from `argv[2]`
+    pub table_name: &'a str,
+    /// The remaining arguments given in the constructor of the virtual
+    /// table, inside `CREATE VIRTUAL TABLE xxx USING custom_vtab(...)`.
+    /// Sourced from `argv[3:]`
+    pub arguments: Vec<&'a str>,
+}
+
+/// Generally do not use this. Does a bunch of copying.
+fn c_string_to_str<'a>(c: *const c_char) -> Result<&'a str, Utf8Error> {
+    let s = unsafe { CStr::from_ptr(c).to_str()? };
+    Ok(s)
+}
+
+pub fn parse_vtab_args<'a>(
+    argc: c_int,
+    argv: *const *const c_char,
+) -> Result<VTabArgs<'a>, Utf8Error> {
+    let raw_args = unsafe { slice::from_raw_parts(argv, argc as usize) };
+    let mut args = Vec::with_capacity(argc as usize);
+    for arg in raw_args {
+        args.push(c_string_to_str(*arg)?);
+    }
+
+    // SQLite guarantees that argv[0-2] will be filled, hence the .expects() -
+    // If SQLite is wrong, then may god save our souls
+    let module_name = args
+        .get(0)
+        .expect("argv[0] should be the name of the module");
+    let database_name = args
+        .get(1)
+        .expect("argv[1] should be the name of the database the module is in");
+    let table_name = args
+        .get(2)
+        .expect("argv[2] should be the name of the virtual table");
+    let arguments = &args[3..];
+
+    Ok(VTabArgs {
+        module_name,
+        database_name,
+        table_name,
+        arguments: arguments.to_vec(),
+    })
+}
+
+// type xCreateC = extern "C" fn(
+//     *mut sqlite3,
+//     *mut c_void,
+//     c_int,
+//     *const *const c_char,
+//     *mut *mut vtab,
+//     *mut *mut c_char,
+// ) -> c_int;
+
+// // return a lambda that invokes f appropriately?
+// pub const fn xCreate(
+//     f: fn(
+//         db: *mut sqlite3,
+//         aux: *mut c_void,
+//         args: Vec<&str>,
+//         tab: *mut *mut vtab,   // declare tab for them?
+//         err: *mut *mut c_char, // box?
+//     ) -> Result<ResultCode, ResultCode>,
+// ) -> xCreateC {
+//     move |db, aux, argc, argv, ppvtab, errmsg| match f(db, aux, str_args, ppvtab, errmsg) {
+//         Ok(rc) => rc as c_int,
+//         Err(rc) => rc as c_int,
+//     }
+// }
+
+// *mut sqlite3, *mut c_void, Vec<&str>, *mut *mut vtab, *mut *mut c_char
