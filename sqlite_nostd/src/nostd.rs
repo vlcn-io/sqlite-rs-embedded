@@ -1004,11 +1004,11 @@ impl Value for *mut value {
     }
 }
 
-pub trait pzErrMsg {
+pub trait StrRef {
     fn set(&self, val: &str);
 }
 
-impl pzErrMsg for *mut *mut c_char {
+impl StrRef for *mut *mut c_char {
     /**
      * Sets the error message, copying the contents of `val`.
      * If the error has already been set, future calls to `set` are ignored.
