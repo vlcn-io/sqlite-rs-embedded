@@ -1,10 +1,11 @@
 extern crate alloc;
 
+use alloc::boxed::Box;
 use alloc::ffi::{IntoStringError, NulError};
-use alloc::string::ToString;
 use alloc::vec::Vec;
 use alloc::{ffi::CString, string::String};
 use core::array::TryFromSliceError;
+use core::convert;
 use core::ffi::{c_char, c_int, c_void, CStr};
 use core::ptr::null_mut;
 use core::{error::Error, slice, str::Utf8Error};
@@ -1028,6 +1029,33 @@ impl pzErrMsg for *mut *mut c_char {
     }
 }
 
+// TODO: on `T` can I enforce that T has a pointer of name `base` as first item to `vtab`?
+pub trait VTabRef {
+    fn set<T>(&self, val: Box<T>);
+}
+
+impl VTabRef for *mut *mut vtab {
+    fn set<T>(&self, val: Box<T>) {
+        unsafe {
+            let raw_val = Box::into_raw(val);
+            **self = raw_val.cast::<sqlite3_capi::vtab>();
+        }
+    }
+}
+
+pub trait CursorRef {
+    fn set<T>(&self, val: Box<T>);
+}
+
+impl CursorRef for *mut *mut vtab_cursor {
+    fn set<T>(&self, val: Box<T>) {
+        unsafe {
+            let raw_val = Box::into_raw(val);
+            **self = raw_val.cast::<sqlite3_capi::vtab_cursor>();
+        }
+    }
+}
+
 pub trait VTab {
     fn set_err(&self, val: &str);
 }
@@ -1108,6 +1136,12 @@ pub fn parse_vtab_args<'a>(
         table_name,
         arguments: arguments.to_vec(),
     })
+}
+
+pub fn declare_vtab(db: *mut sqlite3, def: &str) -> Result<ResultCode, ResultCode> {
+    let cstring = CString::new(def)?;
+    let ret = sqlite3_capi::declare_vtab(db, cstring.as_ptr());
+    convert_rc(ret)
 }
 
 // type xCreateC = extern "C" fn(
