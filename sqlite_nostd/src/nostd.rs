@@ -5,7 +5,6 @@ use alloc::ffi::{IntoStringError, NulError};
 use alloc::vec::Vec;
 use alloc::{ffi::CString, string::String};
 use core::array::TryFromSliceError;
-use core::convert;
 use core::ffi::{c_char, c_int, c_void, CStr};
 use core::ptr::null_mut;
 use core::{error::Error, slice, str::Utf8Error};
