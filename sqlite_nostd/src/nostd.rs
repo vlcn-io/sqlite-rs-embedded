@@ -236,6 +236,12 @@ pub trait Connection {
     fn prepare_v2(&self, sql: &str) -> Result<ManagedStmt, ResultCode>;
 
     fn prepare_v3(&self, sql: &str, flags: u32) -> Result<ManagedStmt, ResultCode>;
+
+    fn set_authorizer(
+        &self,
+        x_auth: Option<XAuthorizer>,
+        user_data: *mut c_void,
+    ) -> Result<ResultCode, ResultCode>;
 }
 
 impl Connection for ManagedConnection {
@@ -263,6 +269,14 @@ impl Connection for ManagedConnection {
         self.db.create_function_v2(
             name, n_arg, flags, user_data, func, step, final_func, destroy,
         )
+    }
+
+    fn set_authorizer(
+        &self,
+        x_auth: Option<XAuthorizer>,
+        user_data: *mut c_void,
+    ) -> Result<ResultCode, ResultCode> {
+        self.db.set_authorizer(x_auth, user_data)
     }
 
     fn create_module_v2(
@@ -504,6 +518,14 @@ impl Connection for *mut sqlite3 {
         } else {
             Some(ptr)
         }
+    }
+
+    fn set_authorizer(
+        &self,
+        x_auth: Option<XAuthorizer>,
+        user_data: *mut c_void,
+    ) -> Result<ResultCode, ResultCode> {
+        convert_rc(set_authorizer(*self, x_auth, user_data))
     }
 
     fn errmsg(&self) -> Result<String, IntoStringError> {

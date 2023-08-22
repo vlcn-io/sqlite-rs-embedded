@@ -62,9 +62,9 @@ mod aliased {
         sqlite3_result_int as result_int, sqlite3_result_int64 as result_int64,
         sqlite3_result_null as result_null, sqlite3_result_pointer as result_pointer,
         sqlite3_result_subtype as result_subtype, sqlite3_result_text as result_text,
-        sqlite3_result_value as result_value, sqlite3_set_auxdata as set_auxdata,
-        sqlite3_shutdown as shutdown, sqlite3_sql as sql, sqlite3_step as step,
-        sqlite3_user_data as user_data, sqlite3_value_blob as value_blob,
+        sqlite3_result_value as result_value, sqlite3_set_authorizer as set_authorizer,
+        sqlite3_set_auxdata as set_auxdata, sqlite3_shutdown as shutdown, sqlite3_sql as sql,
+        sqlite3_step as step, sqlite3_user_data as user_data, sqlite3_value_blob as value_blob,
         sqlite3_value_bytes as value_bytes, sqlite3_value_double as value_double,
         sqlite3_value_int as value_int, sqlite3_value_int64 as value_int64,
         sqlite3_value_pointer as value_pointer, sqlite3_value_subtype as value_subtype,
@@ -494,6 +494,23 @@ pub fn result_text(context: *mut context, s: *const c_char, n: c_int, d: Destruc
 
 pub fn result_subtype(context: *mut context, subtype: u32) {
     unsafe { invoke_sqlite!(result_subtype, context, subtype) }
+}
+
+pub type XAuthorizer = unsafe extern "C" fn(
+    user_data: *mut c_void,
+    action_code: c_int,
+    item_name: *const c_char,
+    sub_item_name: *const c_char,
+    db_name: *const c_char,
+    trigger_view_or_null: *const c_char,
+) -> c_int;
+
+pub fn set_authorizer(
+    db: *mut sqlite3,
+    xAuth: ::core::option::Option<XAuthorizer>,
+    user_data: *mut c_void,
+) -> c_int {
+    unsafe { invoke_sqlite!(set_authorizer, db, xAuth, user_data) }
 }
 
 pub fn set_auxdata(
