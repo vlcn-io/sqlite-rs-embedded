@@ -604,7 +604,16 @@ impl ManagedStmt {
 
     #[inline]
     pub fn column_text(&self, i: i32) -> Result<&str, ResultCode> {
-        Ok(column_text(self.stmt, i))
+        let len = column_bytes(self.stmt, i);
+        let ptr = column_text_ptr(self.stmt, i);
+        if ptr.is_null() {
+            Err(ResultCode::NULL)
+        } else {
+            Ok(unsafe {
+                let slice = core::slice::from_raw_parts(ptr as *const u8, len as usize);
+                core::str::from_utf8_unchecked(slice)
+            })
+        }
     }
 
     #[inline]

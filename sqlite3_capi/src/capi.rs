@@ -1,6 +1,6 @@
 extern crate alloc;
 
-use core::ffi::{c_char, c_int, c_uint, c_void, CStr};
+use core::ffi::{c_char, c_uchar, c_int, c_uint, c_void, CStr};
 use core::ptr;
 
 use alloc::borrow::ToOwned;
@@ -252,6 +252,10 @@ pub fn column_text<'a>(stmt: *mut stmt, c: c_int) -> &'a str {
         let slice = core::slice::from_raw_parts(bytes as *const u8, len as usize);
         core::str::from_utf8_unchecked(slice)
     }
+}
+
+pub fn column_text_ptr(stmt: *mut stmt, c: c_int) -> *const c_uchar {
+    unsafe { invoke_sqlite!(column_text, stmt, c) }
 }
 
 pub fn column_blob(stmt: *mut stmt, c: c_int) -> *const c_void {
