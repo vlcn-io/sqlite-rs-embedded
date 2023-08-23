@@ -669,6 +669,14 @@ impl ManagedStmt {
     }
 
     #[inline]
+    pub fn bind_null(&self, i: i32) -> Result<ResultCode, ResultCode> {
+        convert_rc(bind_null(
+            self.stmt,
+            i
+        ))
+    }
+
+    #[inline]
     pub fn clear_bindings(&self) -> Result<ResultCode, ResultCode> {
         convert_rc(clear_bindings(self.stmt))
     }
