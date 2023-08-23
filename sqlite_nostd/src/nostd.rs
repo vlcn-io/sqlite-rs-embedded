@@ -242,6 +242,8 @@ pub trait Connection {
         x_auth: Option<XAuthorizer>,
         user_data: *mut c_void,
     ) -> Result<ResultCode, ResultCode>;
+
+    fn get_autocommit(&self) -> bool;
 }
 
 impl Connection for ManagedConnection {
@@ -327,6 +329,11 @@ impl Connection for ManagedConnection {
     #[inline]
     fn errcode(&self) -> ResultCode {
         self.db.errcode()
+    }
+
+    #[inline]
+    fn get_autocommit(&self) -> bool {
+        self.db.get_autocommit()
     }
 
     #[cfg(all(feature = "static", not(feature = "omit_load_extension")))]
@@ -535,6 +542,10 @@ impl Connection for *mut sqlite3 {
     fn errcode(&self) -> ResultCode {
         ResultCode::from_i32(errcode(*self)).unwrap()
     }
+
+    fn get_autocommit(&self) -> bool {
+        get_autocommit(*self) != 0
+    }
 }
 
 pub fn convert_rc(rc: i32) -> Result<ResultCode, ResultCode> {
@@ -593,7 +604,16 @@ impl ManagedStmt {
 
     #[inline]
     pub fn column_text(&self, i: i32) -> Result<&str, ResultCode> {
-        Ok(column_text(self.stmt, i))
+        let len = column_bytes(self.stmt, i);
+        let ptr = column_text_ptr(self.stmt, i);
+        if ptr.is_null() {
+            Err(ResultCode::NULL)
+        } else {
+            Ok(unsafe {
+                let slice = core::slice::from_raw_parts(ptr as *const u8, len as usize);
+                core::str::from_utf8_unchecked(slice)
+            })
+        }
     }
 
     #[inline]
@@ -666,6 +686,14 @@ impl ManagedStmt {
     #[inline]
     pub fn bind_int(&self, i: i32, val: i32) -> Result<ResultCode, ResultCode> {
         convert_rc(bind_int(self.stmt, i, val))
+    }
+
+    #[inline]
+    pub fn bind_null(&self, i: i32) -> Result<ResultCode, ResultCode> {
+        convert_rc(bind_null(
+            self.stmt,
+            i
+        ))
     }
 
     #[inline]
