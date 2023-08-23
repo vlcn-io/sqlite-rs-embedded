@@ -71,7 +71,7 @@ mod aliased {
         sqlite3_value_text as value_text, sqlite3_value_type as value_type,
         sqlite3_vtab_collation as vtab_collation, sqlite3_vtab_config as vtab_config,
         sqlite3_vtab_distinct as vtab_distinct, sqlite3_vtab_nochange as vtab_nochange,
-        sqlite3_vtab_on_conflict as vtab_on_conflict,
+        sqlite3_vtab_on_conflict as vtab_on_conflict, sqlite3_get_autocommit as get_autocommit
     };
 }
 
@@ -583,4 +583,8 @@ pub fn value_pointer(arg1: *mut value, p: *mut c_char) -> *mut c_void {
 
 pub fn vtab_distinct(index_info: *mut index_info) -> c_int {
     unsafe { invoke_sqlite!(vtab_distinct, index_info) }
+}
+
+pub fn get_autocommit(db: *mut sqlite3) -> c_int {
+    unsafe { invoke_sqlite!(get_autocommit, db) }
 }

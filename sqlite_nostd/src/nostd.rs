@@ -242,6 +242,8 @@ pub trait Connection {
         x_auth: Option<XAuthorizer>,
         user_data: *mut c_void,
     ) -> Result<ResultCode, ResultCode>;
+
+    fn get_autocommit(&self) -> bool;
 }
 
 impl Connection for ManagedConnection {
@@ -327,6 +329,11 @@ impl Connection for ManagedConnection {
     #[inline]
     fn errcode(&self) -> ResultCode {
         self.db.errcode()
+    }
+
+    #[inline]
+    fn get_autocommit(&self) -> bool {
+        self.db.get_autocommit()
     }
 
     #[cfg(all(feature = "static", not(feature = "omit_load_extension")))]
@@ -534,6 +541,10 @@ impl Connection for *mut sqlite3 {
 
     fn errcode(&self) -> ResultCode {
         ResultCode::from_i32(errcode(*self)).unwrap()
+    }
+
+    fn get_autocommit(&self) -> bool {
+        get_autocommit(*self) != 0
     }
 }
 
