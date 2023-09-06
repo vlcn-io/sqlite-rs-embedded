@@ -194,6 +194,12 @@ impl From<NulError> for ResultCode {
     }
 }
 
+impl From<IntoStringError> for ResultCode {
+    fn from(_error: IntoStringError) -> Self {
+        ResultCode::FORMAT
+    }
+}
+
 #[derive(FromPrimitive, PartialEq, Debug)]
 pub enum ColumnType {
     Integer = 1,
@@ -729,10 +735,7 @@ impl ManagedStmt {
 
     #[inline]
     pub fn bind_null(&self, i: i32) -> Result<ResultCode, ResultCode> {
-        convert_rc(bind_null(
-            self.stmt,
-            i
-        ))
+        convert_rc(bind_null(self.stmt, i))
     }
 
     #[inline]
