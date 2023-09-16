@@ -742,6 +742,12 @@ impl ManagedStmt {
     pub fn clear_bindings(&self) -> Result<ResultCode, ResultCode> {
         convert_rc(clear_bindings(self.stmt))
     }
+
+    pub fn into_raw(self) -> *mut stmt {
+        let stmt = self.stmt;
+        core::mem::forget(self);
+        stmt
+    }
 }
 
 impl Drop for ManagedStmt {
