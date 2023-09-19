@@ -5,6 +5,8 @@ use alloc::ffi::{IntoStringError, NulError};
 use alloc::vec::Vec;
 use alloc::{ffi::CString, string::String};
 use core::array::TryFromSliceError;
+use core::borrow::Borrow;
+use core::cell::{BorrowError, BorrowMutError};
 use core::ffi::{c_char, c_int, c_void, CStr};
 use core::ptr::null_mut;
 use core::{error::Error, slice, str::Utf8Error};
@@ -197,6 +199,18 @@ impl From<NulError> for ResultCode {
 impl From<IntoStringError> for ResultCode {
     fn from(_error: IntoStringError) -> Self {
         ResultCode::FORMAT
+    }
+}
+
+impl From<BorrowError> for ResultCode {
+    fn from(_error: BorrowError) -> Self {
+        ResultCode::ERROR
+    }
+}
+
+impl From<BorrowMutError> for ResultCode {
+    fn from(_error: BorrowMutError) -> Self {
+        ResultCode::ERROR
     }
 }
 
@@ -673,20 +687,21 @@ impl ManagedStmt {
     }
 
     #[inline]
-    pub fn column_double(&self, i: i32) -> Result<f64, ResultCode> {
-        Ok(column_double(self.stmt, i))
+    pub fn column_double(&self, i: i32) -> f64 {
+        column_double(self.stmt, i)
     }
 
     #[inline]
-    pub fn column_int(&self, i: i32) -> Result<i32, ResultCode> {
-        Ok(column_int(self.stmt, i))
+    pub fn column_int(&self, i: i32) -> i32 {
+        column_int(self.stmt, i)
     }
 
     #[inline]
-    pub fn column_int64(&self, i: i32) -> Result<i64, ResultCode> {
-        Ok(column_int64(self.stmt, i))
+    pub fn column_int64(&self, i: i32) -> int64 {
+        column_int64(self.stmt, i)
     }
 
+    // TODO: this should return `Option<*mut valu>`
     #[inline]
     pub fn column_value(&self, i: i32) -> Result<*mut value, ResultCode> {
         let ptr = column_value(self.stmt, i);
@@ -724,7 +739,7 @@ impl ManagedStmt {
     }
 
     #[inline]
-    pub fn bind_int64(&self, i: i32, val: i64) -> Result<ResultCode, ResultCode> {
+    pub fn bind_int64(&self, i: i32, val: int64) -> Result<ResultCode, ResultCode> {
         convert_rc(bind_int64(self.stmt, i, val))
     }
 
@@ -741,6 +756,11 @@ impl ManagedStmt {
     #[inline]
     pub fn clear_bindings(&self) -> Result<ResultCode, ResultCode> {
         convert_rc(clear_bindings(self.stmt))
+    }
+
+    #[inline]
+    pub fn finalize(self) -> Result<ResultCode, ResultCode> {
+        self.stmt.finalize()
     }
 
     pub fn into_raw(self) -> *mut stmt {
@@ -771,7 +791,7 @@ pub trait Context {
     fn result_error_code(&self, code: ResultCode);
     fn result_value(&self, value: *mut value);
     fn result_double(&self, value: f64);
-    fn result_int64(&self, value: i64);
+    fn result_int64(&self, value: int64);
     fn result_null(&self);
     fn db_handle(&self) -> *mut sqlite3;
     fn user_data(&self) -> *mut c_void;
@@ -867,7 +887,7 @@ impl Context for *mut context {
     }
 
     #[inline]
-    fn result_int64(&self, value: i64) {
+    fn result_int64(&self, value: int64) {
         result_int64(*self, value);
     }
 
@@ -890,7 +910,7 @@ pub trait Stmt {
     fn bind_value(&self, i: i32, val: *mut value) -> Result<ResultCode, ResultCode>;
     fn bind_text(&self, i: i32, text: &str, d: Destructor) -> Result<ResultCode, ResultCode>;
     fn bind_text_owned(&self, i: i32, text: String) -> Result<ResultCode, ResultCode>;
-    fn bind_int64(&self, i: i32, val: i64) -> Result<ResultCode, ResultCode>;
+    fn bind_int64(&self, i: i32, val: int64) -> Result<ResultCode, ResultCode>;
     fn bind_int(&self, i: i32, val: i32) -> Result<ResultCode, ResultCode>;
     fn bind_double(&self, i: i32, val: f64) -> Result<ResultCode, ResultCode>;
     fn bind_null(&self, i: i32) -> Result<ResultCode, ResultCode>;
@@ -973,7 +993,7 @@ impl Stmt for *mut stmt {
     }
 
     #[inline]
-    fn bind_int64(&self, i: i32, val: i64) -> Result<ResultCode, ResultCode> {
+    fn bind_int64(&self, i: i32, val: int64) -> Result<ResultCode, ResultCode> {
         convert_rc(bind_int64(*self, i, val))
     }
 
@@ -1058,7 +1078,7 @@ pub trait Value {
     fn blob(&self) -> &[u8];
     fn double(&self) -> f64;
     fn int(&self) -> i32;
-    fn int64(&self) -> i64;
+    fn int64(&self) -> int64;
     fn text(&self) -> &str;
     fn bytes(&self) -> i32;
     fn value_type(&self) -> ColumnType;
@@ -1086,7 +1106,7 @@ impl Value for *mut value {
     }
 
     #[inline]
-    fn int64(&self) -> i64 {
+    fn int64(&self) -> int64 {
         value_int64(*self)
     }
 
