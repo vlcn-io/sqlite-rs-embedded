@@ -1131,14 +1131,14 @@ impl StrRef for *mut *mut c_char {
      */
     fn set(&self, val: &str) {
         unsafe {
-            if *self != null_mut() {
+            if **self != null_mut() {
                 return;
             }
             if let Ok(cstring) = CString::new(val) {
-                *self = cstring.into_raw();
+                **self = cstring.into_raw();
             } else {
                 if let Ok(s) = CString::new("Failed setting error message.") {
-                    *self = s.into_raw();
+                    **self = s.into_raw();
                 }
             }
         }
