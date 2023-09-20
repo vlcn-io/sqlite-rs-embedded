@@ -213,6 +213,12 @@ impl From<BorrowMutError> for ResultCode {
     }
 }
 
+impl From<String> for ResultCode {
+    fn from(_error: String) -> Self {
+        ResultCode::ERROR
+    }
+}
+
 #[derive(FromPrimitive, PartialEq, Debug)]
 pub enum ColumnType {
     Integer = 1,
