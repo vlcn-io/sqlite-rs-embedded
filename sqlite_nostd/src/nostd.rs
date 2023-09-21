@@ -274,6 +274,8 @@ pub trait Connection {
         destroy: Option<xDestroy>,
     ) -> Result<ResultCode, ResultCode>;
 
+    fn changes64(&self) -> i64;
+
     #[cfg(all(feature = "static", not(feature = "omit_load_extension")))]
     fn enable_load_extension(&self, enable: bool) -> Result<ResultCode, ResultCode>;
 
@@ -311,6 +313,10 @@ pub trait Connection {
 }
 
 impl Connection for ManagedConnection {
+    fn changes64(&self) -> i64 {
+        self.db.changes64()
+    }
+
     fn commit_hook(
         &self,
         callback: Option<xCommitHook>,
@@ -430,6 +436,10 @@ impl Drop for ManagedConnection {
 }
 
 impl Connection for *mut sqlite3 {
+    fn changes64(&self) -> i64 {
+        unsafe { changes64(*self) }
+    }
+
     fn commit_hook(
         &self,
         callback: Option<xCommitHook>,
