@@ -437,7 +437,7 @@ impl Drop for ManagedConnection {
 
 impl Connection for *mut sqlite3 {
     fn changes64(&self) -> i64 {
-        unsafe { changes64(*self) }
+        changes64(*self)
     }
 
     fn commit_hook(
