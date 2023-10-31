@@ -806,6 +806,7 @@ pub trait Context {
     fn result_error_code(&self, code: ResultCode);
     fn result_value(&self, value: *mut value);
     fn result_double(&self, value: f64);
+    fn result_int(&self, value: i32);
     fn result_int64(&self, value: int64);
     fn result_null(&self);
     fn db_handle(&self) -> *mut sqlite3;
@@ -904,6 +905,11 @@ impl Context for *mut context {
     #[inline]
     fn result_int64(&self, value: int64) {
         result_int64(*self, value);
+    }
+
+    #[inline]
+    fn result_int(&self, value: i32) {
+        result_int(*self, value);
     }
 
     #[inline]
