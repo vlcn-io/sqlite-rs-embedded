@@ -111,14 +111,14 @@ pub extern "C" fn droprust(ptr: *mut c_void) {
 #[macro_export]
 macro_rules! args {
     ($argc:expr, $argv:expr) => {
-        unsafe { slice::from_raw_parts($argv, $argc as usize) }
+        unsafe { ::core::slice::from_raw_parts($argv, $argc as usize) }
     };
 }
 
 #[macro_export]
 macro_rules! args_mut {
     ($argc:expr, $argv:expr) => {
-        unsafe { slice::from_raw_parts_mut($argv, $argc as usize) }
+        unsafe { ::core::slice::from_raw_parts_mut($argv, $argc as usize) }
     };
 }
 
