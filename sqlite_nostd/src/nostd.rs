@@ -884,7 +884,7 @@ impl Context for *mut context {
 
     #[inline]
     fn result_error(&self, text: &str) {
-        result_error(*self, text);
+        result_error(*self, text.as_ptr() as *mut c_char, text.len() as c_int);
     }
 
     #[inline]

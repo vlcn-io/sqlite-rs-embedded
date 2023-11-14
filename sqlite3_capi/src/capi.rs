@@ -465,15 +465,8 @@ pub fn result_pointer(
     unsafe { invoke_sqlite!(result_pointer, context, pointer, name, destructor) }
 }
 
-pub fn result_error(context: *mut context, text: &str) {
-    unsafe {
-        invoke_sqlite!(
-            result_error,
-            context,
-            text.as_ptr() as *mut c_char,
-            text.len() as c_int
-        )
-    }
+pub fn result_error(context: *mut context, text: *mut c_char, len: c_int) {
+    unsafe { invoke_sqlite!(result_error, context, text, len) }
 }
 
 pub fn result_error_code(context: *mut context, code: c_int) {
